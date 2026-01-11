@@ -3,14 +3,15 @@ const router = express.Router();
 const multer = require('multer');
 const Item = require('../models/Item');
 const auth = require('../middleware/authMiddleware');
+const path = require("path");
 
 // Configure how images are saved
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    cb(null, path.join(__dirname, "../uploads"));
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
+    cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
