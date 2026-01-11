@@ -1,0 +1,70 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import API from "../api/axios";
+
+const IMAGE_BASE_URL =
+  import.meta.env.VITE_API_URL?.replace("/api", "") ||
+  "http://localhost:5000";
+
+const Home = () => {
+  const [items, setItems] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    API.get("/items/all")
+      .then((res) => setItems(res.data))
+      .catch((err) => console.error("ITEM FETCH ERROR:", err));
+  }, []);
+
+  const startChat = async (itemId, sellerId) => {
+    if (!localStorage.getItem("token")) {
+      alert("Please login first");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const res = await API.post("/chats/init", {
+        itemId,
+        sellerId,
+      });
+
+      navigate(`/chat/${res.data._id}`);
+    } catch (err) {
+      console.error("START CHAT ERROR:", err.response?.data || err.message);
+      alert("Unable to start chat");
+    }
+  };
+
+  return (
+    <div className="marketplace-container">
+      <h1 className="marketplace-title">Campus Marketplace</h1>
+
+      <div className="marketplace-grid">
+        {items.map((item) => (
+          <div key={item._id} className="marketplace-card">
+            <img
+              src={`${IMAGE_BASE_URL}/uploads/${item.image}`}
+              alt={item.title}
+            />
+
+            <div className="marketplace-content">
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+              <h2>₹{item.price}</h2>
+              <p>Seller: {item.seller?.name}</p>
+            </div>
+
+            <button
+              onClick={() => startChat(item._id, item.seller?._id)}
+            >
+              Chat with Seller
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default Home;

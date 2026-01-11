@@ -1,0 +1,260 @@
+/* =========================
+   GLOBAL
+========================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #1f1f1f;
+  color: white;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* =========================
+   NAVBAR
+========================= */
+
+.navbar {
+  height: 64px;
+  background: #2c3e50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+.navbar-logo {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.nav-link {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.nav-link:hover {
+  opacity: 0.85;
+}
+
+.logout-btn {
+  background: transparent;
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #e74c3c;
+  color: white;
+}
+
+/* =========================
+   MARKETPLACE
+========================= */
+
+.marketplace-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.marketplace-container h1 {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 22px;
+}
+
+.marketplace-card {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.marketplace-card img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.marketplace-content {
+  padding: 14px;
+  flex: 1;
+}
+
+.marketplace-card button {
+  background: #3498db;
+  color: white;
+  border: none;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.marketplace-card button:hover {
+  background: #2980b9;
+}
+
+/* =========================
+   AUTH PAGES
+========================= */
+
+.auth-page {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f5f6fa;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-input {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.auth-btn {
+  padding: 12px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.auth-switch {
+  margin-top: 14px;
+  text-align: center;
+}
+
+/* ===== CHAT UI ===== */
+
+.chat-page {
+  padding: 20px;
+  max-width: 900px;
+  margin: auto;
+}
+
+.chat-box {
+  height: 420px;
+  overflow-y: auto;
+  background: #1f1f1f;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.chat-bubble {
+  max-width: 70%;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+
+.chat-bubble small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+/* 🟦 YOUR MESSAGE (RIGHT) */
+.chat-bubble.me {
+  margin-left: auto;
+  background: #3498db;
+  color: white;
+  border-bottom-right-radius: 0;
+}
+
+/* ⬛ OTHER USER (LEFT) */
+.chat-bubble.other {
+  margin-right: auto;
+  background: #333;
+  color: white;
+  border-bottom-left-radius: 0;
+}
+
+.chat-input {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+}
+
+.chat-input button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #3498db;
+  color: white;
+  cursor: pointer;
+}
+
+.chat-box {
+  max-width: 800px;
+  margin: auto;
+}
+
+.chat-bubble {
+  background: #333;
+  padding: 10px;
+  border-radius: 10px;
+  margin: 8px 0;
+  max-width: 70%;
+}
+
+.chat-bubble.me {
+  margin-left: auto;
+  background: #2563eb;
+  color: white;
+}
+
+.chat-bubble.other {
+  margin-right: auto;
+  background: #444;
+}
