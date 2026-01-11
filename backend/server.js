@@ -7,7 +7,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 
 const authRoutes = require("./routes/auth");
-const itemRoutes = require("./routes/Item");
+const itemRoutes = require("./routes/item");
 const chatRoutes = require("./routes/chats");
 
 const app = express();
