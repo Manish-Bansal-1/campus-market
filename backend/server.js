@@ -1,4 +1,5 @@
 require("dotenv").config();
+console.log("LOG: SERVER IS RUNNING VERSION 2.0");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
