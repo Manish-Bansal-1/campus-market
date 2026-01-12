@@ -27,6 +27,11 @@ const allowedOrigins = [
 ===================== */
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log("➡️ Incoming request:", req.method, req.originalUrl);
+  next();
+});
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -72,17 +77,13 @@ io.on("connection", (socket) => {
   });
 });
 
+
 /* =====================
    🚏 ROUTES
 ===================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/chats", chatRoutes);
-
-app.use((req, res, next) => {
-  console.log("➡️ Incoming request:", req.method, req.originalUrl);
-  next();
-});
 
 
 /* =====================
