@@ -79,6 +79,12 @@ app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/chats", chatRoutes);
 
+app.use((req, res, next) => {
+  console.log("➡️ Incoming request:", req.method, req.originalUrl);
+  next();
+});
+
+
 /* =====================
    🗄️ DATABASE
 ===================== */
