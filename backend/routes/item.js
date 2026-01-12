@@ -1,3 +1,5 @@
+console.log("✅ item routes file loaded");
+
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
