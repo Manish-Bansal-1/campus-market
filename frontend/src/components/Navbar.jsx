@@ -13,10 +13,13 @@ const socket = io(SOCKET_URL, {
 const Navbar = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+
   const [unreadCount, setUnreadCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.clear();
+    setMenuOpen(false);
     navigate("/login");
   };
 
@@ -41,7 +44,7 @@ const Navbar = () => {
     if (!token) return;
 
     const handler = () => {
-      fetchUnread(); // refresh count instantly
+      fetchUnread();
     };
 
     socket.on("unreadUpdate", handler);
@@ -52,76 +55,68 @@ const Navbar = () => {
   }, [token]);
 
   return (
-    <div style={styles.nav}>
-      <div style={styles.logo} onClick={() => navigate("/")}>
-        Campus Market
+    <div className="navbar">
+      <div className="navbar-top">
+        <div className="navbar-logo" onClick={() => navigate("/")}>
+          Campus Market
+        </div>
+
+        {/* 🍔 Mobile menu button */}
+        <button
+          className="navbar-toggle"
+          onClick={() => setMenuOpen((prev) => !prev)}
+        >
+          {menuOpen ? "✖" : "☰"}
+        </button>
       </div>
 
-      <div style={styles.links}>
-        <Link style={styles.link} to="/">Home</Link>
-
-        {token && <Link style={styles.link} to="/sell">Sell Item</Link>}
+      {/* Links */}
+      <div className={`navbar-links ${menuOpen ? "open" : ""}`}>
+        <Link className="nav-link" to="/" onClick={() => setMenuOpen(false)}>
+          Home
+        </Link>
 
         {token && (
-          <Link style={styles.link} to="/messages">
+          <Link className="nav-link" to="/sell" onClick={() => setMenuOpen(false)}>
+            Sell Item
+          </Link>
+        )}
+
+        {token && (
+          <Link
+            className="nav-link"
+            to="/messages"
+            onClick={() => setMenuOpen(false)}
+          >
             Messages
             {unreadCount > 0 && (
-              <span style={styles.badge}>{unreadCount}</span>
+              <span className="nav-badge">{unreadCount}</span>
             )}
           </Link>
         )}
 
-        {token && <Link style={styles.link} to="/my-listings">My Listings</Link>}
+        {token && (
+          <Link
+            className="nav-link"
+            to="/my-listings"
+            onClick={() => setMenuOpen(false)}
+          >
+            My Listings
+          </Link>
+        )}
 
         {token ? (
-          <button style={styles.logout} onClick={handleLogout}>
+          <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
         ) : (
-          <Link style={styles.link} to="/login">Login</Link>
+          <Link className="nav-link" to="/login" onClick={() => setMenuOpen(false)}>
+            Login
+          </Link>
         )}
       </div>
     </div>
   );
-};
-
-const styles = {
-  nav: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "15px 30px",
-    background: "#2c3e50",
-    color: "white",
-  },
-  logo: {
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  links: {
-    display: "flex",
-    gap: "20px",
-    alignItems: "center",
-  },
-  link: {
-    color: "white",
-    textDecoration: "none",
-    position: "relative",
-  },
-  badge: {
-    background: "red",
-    color: "white",
-    borderRadius: "50%",
-    padding: "2px 7px",
-    fontSize: "12px",
-    marginLeft: "6px",
-  },
-  logout: {
-    background: "transparent",
-    border: "1px solid red",
-    color: "red",
-    cursor: "pointer",
-    padding: "5px 10px",
-  },
 };
 
 export default Navbar;

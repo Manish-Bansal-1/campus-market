@@ -88,6 +88,57 @@ body {
 }
 
 /* =========================
+   NAVBAR (UPDATED)
+========================= */
+
+.navbar-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 🍔 Mobile toggle button */
+.navbar-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+/* =========================
+   ✅ MOBILE NAVBAR MENU
+========================= */
+
+@media (max-width: 768px) {
+  .navbar-toggle {
+    display: block;
+  }
+
+  .navbar-links {
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 12px;
+    padding-top: 10px;
+  }
+
+  .navbar-links.open {
+    display: flex;
+  }
+
+  .logout-btn {
+    width: 100%;
+  }
+}
+
+
+/* =========================
    MARKETPLACE
 ========================= */
 
