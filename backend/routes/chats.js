@@ -33,11 +33,20 @@ router.get("/single/:chatId", auth, async (req, res) => {
     .populate("buyer seller", "name")
     .populate("item", "title");
 
+  // ✅ unread reset when opening chat
   chat.unreadCount = 0;
   await chat.save();
 
+  // ✅ emit live update so Navbar/Inbox badge becomes 0 instantly
+  if (req.io) {
+    req.io.emit("unreadUpdate", {
+      chatId: chat._id.toString(),
+    });
+  }
+
   res.json(chat);
 });
+
 
 /* 3️⃣ Send Message */
 router.post("/message", auth, async (req, res) => {
