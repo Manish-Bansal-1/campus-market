@@ -20,6 +20,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",        // local frontend
   "http://localhost:3000",
+  "https://campusmarks.vercel.app",
   "https://campusmarket-zeta.vercel.app",
   process.env.FRONTEND_URL        // vercel frontend (later)
 ].filter(Boolean);
@@ -36,7 +37,7 @@ app.use((req, res, next) => {
 
 app.use(
   cors({
-    origin: true, // ✅ allow all origins (for now)
+    origin: allowedOrigins, // ✅ allow all origins (for now)
     credentials: true,
   })
 );
