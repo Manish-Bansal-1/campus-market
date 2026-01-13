@@ -20,6 +20,7 @@ const server = http.createServer(app);
 const allowedOrigins = [
   "http://localhost:5173",        // local frontend
   "http://localhost:3000",
+  "https://campusmarket-zeta.vercel.app",
   process.env.FRONTEND_URL        // vercel frontend (later)
 ].filter(Boolean);
 
@@ -35,19 +36,11 @@ app.use((req, res, next) => {
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow requests with no origin (Postman, mobile apps)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: true, // ✅ allow all origins (for now)
     credentials: true,
   })
 );
+
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
