@@ -46,23 +46,23 @@ router.post("/message", auth, async (req, res) => {
 
   chat.messages.push({ sender: req.user.id, text });
 
-  // 🔥 unread count update
+  // unread logic
   if (req.user.id.toString() !== chat.seller.toString()) {
     chat.unreadCount += 1;
   }
 
   await chat.save();
 
-  // ✅ emit event for live unread update
+  // ✅ LIVE event for Navbar + Inbox
   if (req.io) {
-    req.io.to(chatId).emit("unreadUpdated", {
+    req.io.emit("unreadUpdate", {
       chatId,
-      unreadCount: chat.unreadCount,
     });
   }
 
   res.json(chat);
 });
+
 
 
 /* 4️⃣ My Chats — 🔥 THIS FIX */
