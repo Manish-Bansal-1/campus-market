@@ -21,7 +21,6 @@ const Chat = () => {
 
   // ✅ Debug logs
   useEffect(() => {
-    console.log("🔌 SOCKET_URL =", SOCKET_URL);
 
     socket.on("connect", () => {
       console.log("✅ Socket connected:", socket.id);
