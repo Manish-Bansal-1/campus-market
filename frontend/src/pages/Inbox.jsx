@@ -20,12 +20,23 @@ const Inbox = () => {
   const fetchChats = async () => {
     try {
       const res = await API.get("/chats/my-chats");
-
-      // ✅ always keep chats as array
       setChats(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("INBOX FETCH ERROR:", err.response?.data || err.message);
-      setChats([]); // ✅ fallback
+    }
+  };
+
+  // ✅ delete chat
+  const deleteChat = async (chatId) => {
+    const ok = window.confirm("Delete this chat?");
+    if (!ok) return;
+
+    try {
+      await API.delete(`/chats/${chatId}`);
+      setChats((prev) => prev.filter((c) => c._id !== chatId));
+    } catch (err) {
+      console.error("DELETE CHAT ERROR:", err.response?.data || err.message);
+      alert("Failed to delete chat");
     }
   };
 
@@ -40,7 +51,7 @@ const Inbox = () => {
     if (!token) return;
 
     const handler = () => {
-      fetchChats(); // refresh inbox list + unread count
+      fetchChats();
     };
 
     socket.on("unreadUpdate", handler);
@@ -63,19 +74,25 @@ const Inbox = () => {
         return (
           <div
             key={chat._id}
-            onClick={() => navigate(`/chat/${chat._id}`)}
             style={{
               background: "#fff",
               padding: "20px",
               marginBottom: "16px",
               borderRadius: "14px",
-              cursor: "pointer",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
+              gap: "12px",
             }}
           >
-            <div>
+            {/* Left click area */}
+            <div
+              onClick={() => navigate(`/chat/${chat._id}`)}
+              style={{
+                cursor: "pointer",
+                flex: 1,
+              }}
+            >
               <div style={{ fontSize: "16px", fontWeight: 600 }}>
                 Chat with: {otherUser?.name || "User"}
               </div>
@@ -91,24 +108,41 @@ const Inbox = () => {
               </div>
             </div>
 
-            {chat.unreadCount > 0 && (
-              <div
+            {/* Right side actions */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {chat.unreadCount > 0 && (
+                <div
+                  style={{
+                    background: "red",
+                    color: "white",
+                    borderRadius: "50%",
+                    width: "30px",
+                    height: "30px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {chat.unreadCount}
+                </div>
+              )}
+
+              <button
+                onClick={() => deleteChat(chat._id)}
                 style={{
-                  background: "red",
+                  background: "#e74c3c",
                   color: "white",
-                  borderRadius: "50%",
-                  width: "30px",
-                  height: "30px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "14px",
-                  fontWeight: "bold",
+                  border: "none",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
                 }}
               >
-                {chat.unreadCount}
-              </div>
-            )}
+                Delete
+              </button>
+            </div>
           </div>
         );
       })}
