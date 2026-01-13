@@ -1,3 +1,8 @@
 node_modules
 .env
-uploads
+
+# ignore all uploaded files
+uploads/*
+
+# but keep folder in github
+!uploads/.gitkeep
