@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -14,21 +14,31 @@ const Navbar = () => {
 
   // 🔔 FETCH UNREAD COUNT
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setUnreadCount(0);
+      return;
+    }
 
     const fetchUnread = async () => {
       try {
-        const res = await axios.get(
-          "http://localhost:5000/api/chats/unread-count",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`, // ✅ FIX
-            },
-          }
-        );
+        const res = await API.get("/chats/unread-count", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         setUnreadCount(res.data.unreadCount || 0);
       } catch (err) {
-        console.error("Unread fetch error");
+        console.error(
+          "Unread fetch error:",
+          err.response?.data || err.message
+        );
+
+        // if token expired
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          setUnreadCount(0);
+        }
       }
     };
 
@@ -42,27 +52,37 @@ const Navbar = () => {
       </div>
 
       <div style={styles.links}>
-        <Link style={styles.link} to="/">Home</Link>
+        <Link style={styles.link} to="/">
+          Home
+        </Link>
 
-        {token && <Link style={styles.link} to="/sell">Sell Item</Link>}
+        {token && (
+          <Link style={styles.link} to="/sell">
+            Sell Item
+          </Link>
+        )}
 
         {token && (
           <Link style={styles.link} to="/messages">
             Messages
-            {unreadCount > 0 && (
-              <span style={styles.badge}>{unreadCount}</span>
-            )}
+            {unreadCount > 0 && <span style={styles.badge}>{unreadCount}</span>}
           </Link>
         )}
 
-        {token && <Link style={styles.link} to="/my-listings">My Listings</Link>}
+        {token && (
+          <Link style={styles.link} to="/my-listings">
+            My Listings
+          </Link>
+        )}
 
         {token ? (
           <button style={styles.logout} onClick={handleLogout}>
             Logout
           </button>
         ) : (
-          <Link style={styles.link} to="/login">Login</Link>
+          <Link style={styles.link} to="/login">
+            Login
+          </Link>
         )}
       </div>
     </div>

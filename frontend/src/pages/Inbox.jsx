@@ -11,26 +11,40 @@ const Inbox = () => {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const res = await API.get("/chats/my-chats");
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          alert("Please login again");
+          navigate("/login");
+          return;
+        }
+
+        const res = await API.get("/chats/my-chats", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         setChats(res.data);
       } catch (err) {
-        console.error(
-          "INBOX FETCH ERROR:",
-          err.response?.data || err.message
-        );
+        console.error("INBOX FETCH ERROR:", err.response?.data || err.message);
+
+        if (err.response?.status === 401) {
+          alert("Session expired. Please login again.");
+          localStorage.removeItem("token");
+          navigate("/login");
+        }
       }
     };
 
     fetchChats();
-  }, []);
+  }, [navigate]);
 
   return (
     <div style={{ padding: "30px" }}>
       <h2 style={{ color: "white" }}>Your Messages</h2>
 
-      {chats.length === 0 && (
-        <p style={{ color: "#aaa" }}>No chats yet</p>
-      )}
+      {chats.length === 0 && <p style={{ color: "#aaa" }}>No chats yet</p>}
 
       {chats.map((chat) => {
         const isBuyer = chat.buyer?._id === user.id;

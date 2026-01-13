@@ -1,33 +1,84 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
 const MyListings = () => {
   const [items, setItems] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchMyItems();
+    // eslint-disable-next-line
   }, []);
 
   const fetchMyItems = async () => {
-    const res = await API.get("/items/my");
-    setItems(res.data);
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        alert("Please login again");
+        navigate("/login");
+        return;
+      }
+
+      const res = await API.get("/items/my", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setItems(res.data);
+    } catch (err) {
+      console.error("MY LISTINGS ERROR:", err.response?.data || err.message);
+
+      if (err.response?.status === 401) {
+        alert("Session expired. Please login again.");
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+    }
   };
 
   const markAsSold = async (id) => {
-    await API.put(`/items/sold/${id}`);
+    try {
+      const token = localStorage.getItem("token");
 
-    setItems((prev) =>
-      prev.map((item) =>
-        item._id === id ? { ...item, isSold: true } : item
-      )
-    );
+      await API.put(
+        `/items/sold/${id}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setItems((prev) =>
+        prev.map((item) => (item._id === id ? { ...item, isSold: true } : item))
+      );
+    } catch (err) {
+      console.error("MARK SOLD ERROR:", err.response?.data || err.message);
+      alert("Failed to mark as sold");
+    }
   };
 
   const deleteItem = async (id) => {
     if (!window.confirm("Delete this item?")) return;
 
-    await API.delete(`/items/${id}`);
-    setItems((prev) => prev.filter((item) => item._id !== id));
+    try {
+      const token = localStorage.getItem("token");
+
+      await API.delete(`/items/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setItems((prev) => prev.filter((item) => item._id !== id));
+    } catch (err) {
+      console.error("DELETE ITEM ERROR:", err.response?.data || err.message);
+      alert("Failed to delete item");
+    }
   };
 
   return (
@@ -49,8 +100,12 @@ const MyListings = () => {
             }}
           >
             <img
-              src={`${IMAGE_BASE_URL}/uploads/${item.image}`}
-              alt=""
+              src={item.image?.replace("/upload/", "/upload/f_auto,q_auto,w_400/")}
+              alt={item.title}
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.png";
+              }}
               style={{
                 width: "100%",
                 height: "150px",

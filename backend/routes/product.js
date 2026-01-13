@@ -38,14 +38,28 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
 
 // 2.Get All Route
 
-router.get('/all', async (req, res) => {
+router.get("/all", async (req, res) => {
   try {
-    // 💡 FIX: Change 'sold' to 'isSold' to match your MongoDB screenshot
-    // 💡 FIX: Ensure we populate 'seller' to give the frontend the ID
-    const items = await Item.find({ isSold: false }).populate('seller', 'name _id');
-    
-    console.log("Items found:", items.length); // This helps you debug in terminal
-    res.status(200).json(items);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+
+    const query = { isSold: false };
+
+    const total = await Item.countDocuments(query);
+
+    const items = await Item.find(query)
+      .populate("seller", "name _id")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      items,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (err) {
     console.error("Fetch Error:", err);
     res.status(500).json({ error: err.message });
