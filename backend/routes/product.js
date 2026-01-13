@@ -25,20 +25,25 @@ const upload = multer({ storage: storage });
 // 1. Update Create Route
 router.post('/add', auth, upload.single('image'), async (req, res) => {
   try {
+    console.log("BODY =>", req.body);
+    console.log("FILE =>", req.file);
+
     const newItem = new Item({
       title: req.body.title,
       description: req.body.description,
       price: req.body.price,
       category: req.body.category,
       image: req.file ? req.file.filename : "",
-      seller: req.user.id, // Use 'owner' instead of 'seller'
+      seller: req.user.id,
     });
+
     const savedItem = await newItem.save();
     res.status(201).json(savedItem);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // 2.Get All Route
 
