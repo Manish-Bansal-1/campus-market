@@ -110,4 +110,35 @@ router.get("/unread-count", auth, async (req, res) => {
   res.json({ unreadCount });
 });
 
+/* 6️⃣ Delete Chat */
+router.delete("/:chatId", auth, async (req, res) => {
+  try {
+    const { chatId } = req.params;
+
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    // ✅ Only buyer or seller can delete
+    const userId = req.user.id.toString();
+
+    const isBuyer = chat.buyer.toString() === userId;
+    const isSeller = chat.seller.toString() === userId;
+
+    if (!isBuyer && !isSeller) {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    await chat.deleteOne();
+
+    res.json({ message: "Chat deleted successfully" });
+  } catch (err) {
+    console.error("DELETE CHAT ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 module.exports = router;
