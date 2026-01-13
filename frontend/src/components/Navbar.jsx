@@ -29,12 +29,8 @@ const Navbar = () => {
 
         setUnreadCount(res.data.unreadCount || 0);
       } catch (err) {
-        console.error(
-          "Unread fetch error:",
-          err.response?.data || err.message
-        );
+        console.error("Unread fetch error:", err.response?.data || err.message);
 
-        // if token expired
         if (err.response?.status === 401) {
           localStorage.removeItem("token");
           setUnreadCount(0);
@@ -46,86 +42,49 @@ const Navbar = () => {
   }, [token]);
 
   return (
-    <div style={styles.nav}>
-      <div style={styles.logo} onClick={() => navigate("/")}>
+    <div className="navbar">
+      <div className="navbar-logo" onClick={() => navigate("/")}>
         Campus Market
       </div>
 
-      <div style={styles.links}>
-        <Link style={styles.link} to="/">
+      <div className="navbar-links">
+        <Link className="nav-link" to="/">
           Home
         </Link>
 
         {token && (
-          <Link style={styles.link} to="/sell">
+          <Link className="nav-link" to="/sell">
             Sell Item
           </Link>
         )}
 
         {token && (
-          <Link style={styles.link} to="/messages">
+          <Link className="nav-link" to="/messages">
             Messages
-            {unreadCount > 0 && <span style={styles.badge}>{unreadCount}</span>}
+            {unreadCount > 0 && (
+              <span className="nav-badge">{unreadCount}</span>
+            )}
           </Link>
         )}
 
         {token && (
-          <Link style={styles.link} to="/my-listings">
+          <Link className="nav-link" to="/my-listings">
             My Listings
           </Link>
         )}
 
         {token ? (
-          <button style={styles.logout} onClick={handleLogout}>
+          <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
         ) : (
-          <Link style={styles.link} to="/login">
+          <Link className="nav-link" to="/login">
             Login
           </Link>
         )}
       </div>
     </div>
   );
-};
-
-const styles = {
-  nav: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "15px 30px",
-    background: "#2c3e50",
-    color: "white",
-  },
-  logo: {
-    fontWeight: "bold",
-    cursor: "pointer",
-  },
-  links: {
-    display: "flex",
-    gap: "20px",
-    alignItems: "center",
-  },
-  link: {
-    color: "white",
-    textDecoration: "none",
-    position: "relative",
-  },
-  badge: {
-    background: "red",
-    color: "white",
-    borderRadius: "50%",
-    padding: "2px 7px",
-    fontSize: "12px",
-    marginLeft: "6px",
-  },
-  logout: {
-    background: "transparent",
-    border: "1px solid red",
-    color: "red",
-    cursor: "pointer",
-    padding: "5px 10px",
-  },
 };
 
 export default Navbar;
