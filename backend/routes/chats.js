@@ -21,6 +21,10 @@ router.post("/init", auth, async (req, res) => {
       seller: sellerId,
       messages: [],
       unreadCount: 0,
+
+      // ✅ soft delete flags
+      deletedByBuyer: false,
+      deletedBySeller: false,
     });
   }
 
@@ -47,7 +51,6 @@ router.get("/single/:chatId", auth, async (req, res) => {
   res.json(chat);
 });
 
-
 /* 3️⃣ Send Message */
 router.post("/message", auth, async (req, res) => {
   const { chatId, text } = req.body;
@@ -59,6 +62,10 @@ router.post("/message", auth, async (req, res) => {
   if (req.user.id.toString() !== chat.seller.toString()) {
     chat.unreadCount += 1;
   }
+
+  // 🔥 IMPORTANT: new message aaya toh chat "unhide" bhi ho jaye
+  chat.deletedByBuyer = false;
+  chat.deletedBySeller = false;
 
   await chat.save();
 
@@ -72,17 +79,25 @@ router.post("/message", auth, async (req, res) => {
   res.json(chat);
 });
 
-
-
-/* 4️⃣ My Chats — 🔥 THIS FIX */
+/* 4️⃣ My Chats (hide deleted chats) */
 router.get("/my-chats", auth, async (req, res) => {
   const userId = req.user.id.toString();
 
   const chats = await Chat.find({
     $expr: {
       $or: [
-        { $eq: [{ $toString: "$buyer" }, userId] },
-        { $eq: [{ $toString: "$seller" }, userId] },
+        {
+          $and: [
+            { $eq: [{ $toString: "$buyer" }, userId] },
+            { $ne: ["$deletedByBuyer", true] },
+          ],
+        },
+        {
+          $and: [
+            { $eq: [{ $toString: "$seller" }, userId] },
+            { $ne: ["$deletedBySeller", true] },
+          ],
+        },
       ],
     },
   })
@@ -94,13 +109,16 @@ router.get("/my-chats", auth, async (req, res) => {
   res.json(chats);
 });
 
-/* 5️⃣ Unread Count */
+/* 5️⃣ Unread Count (ignore deleted chats for seller) */
 router.get("/unread-count", auth, async (req, res) => {
   const userId = req.user.id.toString();
 
   const chats = await Chat.find({
     $expr: {
-      $eq: [{ $toString: "$seller" }, userId],
+      $and: [
+        { $eq: [{ $toString: "$seller" }, userId] },
+        { $ne: ["$deletedBySeller", true] },
+      ],
     },
   });
 
@@ -110,7 +128,7 @@ router.get("/unread-count", auth, async (req, res) => {
   res.json({ unreadCount });
 });
 
-/* 6️⃣ Delete Chat */
+/* 6️⃣ Soft Delete Chat (DB me delete nahi hoga) */
 router.delete("/:chatId", auth, async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -130,22 +148,22 @@ router.delete("/:chatId", auth, async (req, res) => {
       return res.status(403).json({ error: "Not allowed" });
     }
 
-    await chat.deleteOne();
+    // ✅ hide only
+    if (isBuyer) chat.deletedByBuyer = true;
+    if (isSeller) chat.deletedBySeller = true;
+
+    await chat.save();
 
     // ✅ LIVE UPDATE for Navbar + Inbox
     if (req.io) {
       req.io.emit("unreadUpdate", { chatId });
     }
 
-    res.json({ message: "Chat deleted successfully" });
+    res.json({ message: "Chat removed from your inbox" });
   } catch (err) {
     console.error("DELETE CHAT ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
-
 
 module.exports = router;

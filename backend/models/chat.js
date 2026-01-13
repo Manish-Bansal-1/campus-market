@@ -29,10 +29,22 @@ const chatSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
     messages: [messageSchema],
+
     unreadCount: {
       type: Number,
       default: 0,
+    },
+
+    // ✅ SOFT DELETE FLAGS
+    deletedByBuyer: {
+      type: Boolean,
+      default: false,
+    },
+    deletedBySeller: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
