@@ -20,9 +20,12 @@ const Inbox = () => {
   const fetchChats = async () => {
     try {
       const res = await API.get("/chats/my-chats");
-      setChats(res.data);
+
+      // ✅ always keep chats as array
+      setChats(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("INBOX FETCH ERROR:", err.response?.data || err.message);
+      setChats([]); // ✅ fallback
     }
   };
 

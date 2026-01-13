@@ -11,8 +11,14 @@ const Home = () => {
 
   useEffect(() => {
     API.get("/items/all")
-      .then((res) => setItems(res.data))
-      .catch((err) => console.error("ITEM FETCH ERROR:", err));
+      .then((res) => {
+        // ✅ always keep items as array
+        setItems(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        console.error("ITEM FETCH ERROR:", err);
+        setItems([]); // ✅ fallback
+      });
   }, []);
 
   const startChat = async (itemId, sellerId) => {
