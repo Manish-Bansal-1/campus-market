@@ -111,7 +111,6 @@ router.get("/unread-count", auth, async (req, res) => {
 });
 
 /* 6️⃣ Delete Chat */
-/* 6️⃣ Delete Chat */
 router.delete("/:chatId", auth, async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -133,9 +132,9 @@ router.delete("/:chatId", auth, async (req, res) => {
 
     await chat.deleteOne();
 
-    // 🔥 LIVE UPDATE for everyone (Navbar + Inbox refresh)
+    // ✅ LIVE UPDATE for Navbar + Inbox
     if (req.io) {
-      req.io.emit("unreadUpdate");
+      req.io.emit("unreadUpdate", { chatId });
     }
 
     res.json({ message: "Chat deleted successfully" });
@@ -144,6 +143,7 @@ router.delete("/:chatId", auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 
