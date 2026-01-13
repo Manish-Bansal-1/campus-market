@@ -6,6 +6,7 @@ const cors = require("cors");
 const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
+const rateLimit = require("express-rate-limit");
 
 const authRoutes = require("./routes/auth");
 const itemRoutes = require("./routes/product");
@@ -28,6 +29,15 @@ const allowedOrigins = [
 /* =====================
    🧠 MIDDLEWARE
 ===================== */
+
+const addItemLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 20, // 15 min me max 20 items
+  message: { error: "Too many uploads, try again later." },
+});
+
+app.use("/api/items/add", addItemLimiter);
+
 app.use(express.json());
 
 app.use((req, res, next) => {
