@@ -65,10 +65,13 @@ const io = new Server(server, {
   transports: ["websocket", "polling"],
 });
 
-
+app.set("io", io); 
 
 io.on("connection", (socket) => {
   console.log("🟢 User connected:", socket.id);
+  socket.on("joinUser", (userId) => {
+    socket.join(userId);
+  });
 
   socket.on("joinChat", (chatId) => {
     socket.join(chatId);
