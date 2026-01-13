@@ -1,44 +1,51 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+
+const socket = io(SOCKET_URL, {
+  transports: ["websocket", "polling"],
+  withCredentials: true,
+});
 
 const Inbox = () => {
   const [chats, setChats] = useState([]);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = localStorage.getItem("token");
 
+  const fetchChats = async () => {
+    try {
+      const res = await API.get("/chats/my-chats");
+      setChats(res.data);
+    } catch (err) {
+      console.error("INBOX FETCH ERROR:", err.response?.data || err.message);
+    }
+  };
+
+  // ✅ 1st time load
   useEffect(() => {
-    const fetchChats = async () => {
-      try {
-        const token = localStorage.getItem("token");
+    if (!token) return;
+    fetchChats();
+  }, [token]);
 
-        if (!token) {
-          alert("Please login again");
-          navigate("/login");
-          return;
-        }
+  // 🔥 LIVE update when message comes
+  useEffect(() => {
+    if (!token) return;
 
-        const res = await API.get("/chats/my-chats", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setChats(res.data);
-      } catch (err) {
-        console.error("INBOX FETCH ERROR:", err.response?.data || err.message);
-
-        if (err.response?.status === 401) {
-          alert("Session expired. Please login again.");
-          localStorage.removeItem("token");
-          navigate("/login");
-        }
-      }
+    const handler = () => {
+      fetchChats(); // refresh inbox list + unread count
     };
 
-    fetchChats();
-  }, [navigate]);
+    socket.on("unreadUpdate", handler);
+
+    return () => {
+      socket.off("unreadUpdate", handler);
+    };
+  }, [token]);
 
   return (
     <div style={{ padding: "30px" }}>

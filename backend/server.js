@@ -75,8 +75,16 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (data) => {
-    io.to(data.chatId).emit("receiveMessage", data);
+  // message live in chat room
+  io.to(data.chatId).emit("receiveMessage", data);
+
+  // 🔔 navbar unread count update (global)
+  io.emit("unreadUpdate", {
+    chatId: data.chatId,
+    sender: data.sender,
   });
+});
+
 
   socket.on("disconnect", () => {
     console.log("🔴 User disconnected:", socket.id);
@@ -89,7 +97,11 @@ io.on("connection", (socket) => {
 ===================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
-app.use("/api/chats", chatRoutes);
+app.use("/api/chats", (req, res, next) => {
+  req.io = io; // ✅ io available in routes
+  next();
+}, chatRoutes);
+
 
 
 /* =====================

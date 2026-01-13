@@ -1,6 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../api/axios";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+
+const socket = io(SOCKET_URL, {
+  transports: ["websocket", "polling"],
+  withCredentials: true,
+});
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -12,79 +20,108 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  // 🔔 FETCH UNREAD COUNT
-  useEffect(() => {
-    if (!token) {
-      setUnreadCount(0);
-      return;
+  // 🔔 function to fetch unread count
+  const fetchUnread = async () => {
+    if (!token) return;
+    try {
+      const res = await API.get("/chats/unread-count");
+      setUnreadCount(res.data.unreadCount || 0);
+    } catch (err) {
+      console.error("Unread fetch error:", err.response?.data || err.message);
     }
+  };
 
-    const fetchUnread = async () => {
-      try {
-        const res = await API.get("/chats/unread-count", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setUnreadCount(res.data.unreadCount || 0);
-      } catch (err) {
-        console.error("Unread fetch error:", err.response?.data || err.message);
-
-        if (err.response?.status === 401) {
-          localStorage.removeItem("token");
-          setUnreadCount(0);
-        }
-      }
-    };
-
+  // ✅ On load unread fetch
+  useEffect(() => {
     fetchUnread();
   }, [token]);
 
+  // 🔥 LIVE unread update via socket
+  useEffect(() => {
+    if (!token) return;
+
+    const handler = () => {
+      fetchUnread(); // refresh count instantly
+    };
+
+    socket.on("unreadUpdate", handler);
+
+    return () => {
+      socket.off("unreadUpdate", handler);
+    };
+  }, [token]);
+
   return (
-    <div className="navbar">
-      <div className="navbar-logo" onClick={() => navigate("/")}>
+    <div style={styles.nav}>
+      <div style={styles.logo} onClick={() => navigate("/")}>
         Campus Market
       </div>
 
-      <div className="navbar-links">
-        <Link className="nav-link" to="/">
-          Home
-        </Link>
+      <div style={styles.links}>
+        <Link style={styles.link} to="/">Home</Link>
+
+        {token && <Link style={styles.link} to="/sell">Sell Item</Link>}
 
         {token && (
-          <Link className="nav-link" to="/sell">
-            Sell Item
-          </Link>
-        )}
-
-        {token && (
-          <Link className="nav-link" to="/messages">
+          <Link style={styles.link} to="/messages">
             Messages
             {unreadCount > 0 && (
-              <span className="nav-badge">{unreadCount}</span>
+              <span style={styles.badge}>{unreadCount}</span>
             )}
           </Link>
         )}
 
-        {token && (
-          <Link className="nav-link" to="/my-listings">
-            My Listings
-          </Link>
-        )}
+        {token && <Link style={styles.link} to="/my-listings">My Listings</Link>}
 
         {token ? (
-          <button className="logout-btn" onClick={handleLogout}>
+          <button style={styles.logout} onClick={handleLogout}>
             Logout
           </button>
         ) : (
-          <Link className="nav-link" to="/login">
-            Login
-          </Link>
+          <Link style={styles.link} to="/login">Login</Link>
         )}
       </div>
     </div>
   );
+};
+
+const styles = {
+  nav: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "15px 30px",
+    background: "#2c3e50",
+    color: "white",
+  },
+  logo: {
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  links: {
+    display: "flex",
+    gap: "20px",
+    alignItems: "center",
+  },
+  link: {
+    color: "white",
+    textDecoration: "none",
+    position: "relative",
+  },
+  badge: {
+    background: "red",
+    color: "white",
+    borderRadius: "50%",
+    padding: "2px 7px",
+    fontSize: "12px",
+    marginLeft: "6px",
+  },
+  logout: {
+    background: "transparent",
+    border: "1px solid red",
+    color: "red",
+    cursor: "pointer",
+    padding: "5px 10px",
+  },
 };
 
 export default Navbar;
