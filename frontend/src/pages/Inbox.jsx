@@ -130,7 +130,10 @@ const Inbox = () => {
               )}
 
               <button
-                onClick={() => deleteChat(chat._id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteChat(chat._id);
+                }}
                 style={{
                   background: "#e74c3c",
                   color: "white",
