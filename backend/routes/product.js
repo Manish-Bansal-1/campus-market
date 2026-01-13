@@ -1,29 +1,16 @@
-console.log("✅ item routes file loaded");
-
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const Item = require('../models/Item');
 const auth = require('../middleware/authMiddleware');
-const path = require("path");
-
-// Configure how images are saved
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = require("../middleware/upload");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 // CREATE ITEM
 // Inside backend/routes/Item.js
 
 // 1. Update Create Route
 router.post("/add", auth, upload.single("image"), async (req, res) => {
+
   try {
     let imageUrl = "";
 
@@ -44,13 +31,10 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
     const savedItem = await newItem.save();
     res.status(201).json(savedItem);
   } catch (err) {
-    console.log("UPLOAD ERROR =>", err);
+    console.log("❌ Add item error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
-
-
-
 
 // 2.Get All Route
 

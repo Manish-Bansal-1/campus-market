@@ -13,6 +13,8 @@ const CreateListing = () => {
   const submitItem = async (e) => {
     e.preventDefault();
 
+    const token = localStorage.getItem("token");
+
     if (!localStorage.getItem("token")) {
       alert("Please login again");
       navigate("/login");
@@ -26,19 +28,27 @@ const CreateListing = () => {
     formData.append("image", image);
 
     try {
-      await API.post("/items/add", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+    await API.post("/items/add", formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-      alert("Item listed successfully!");
-      navigate("/");
-    } catch (err) {
-      console.error(err.response?.data || err.message);
-      alert("Failed to list item");
+    alert("Item listed successfully!");
+    navigate("/");
+  } catch (err) {
+    console.error(err.response?.data || err.message);
+
+    if (err.response?.status === 401) {
+      alert("Session expired. Please login again.");
+      localStorage.removeItem("token");
+      navigate("/login");
+      return;
     }
-  };
+
+    alert("Failed to list item");
+  }
+};
 
   return (
     <div className="auth-page">
