@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 
-const IMAGE_BASE_URL =
-  import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
-
 const MyListings = () => {
   const [items, setItems] = useState([]);
 

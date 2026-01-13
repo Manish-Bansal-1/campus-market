@@ -2,10 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
-const IMAGE_BASE_URL =
-  import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
-
 const Home = () => {
   const [items, setItems] = useState([]);
   const navigate = useNavigate();
@@ -44,9 +40,10 @@ const Home = () => {
         {items.map((item) => (
           <div key={item._id} className="marketplace-card">
             <img
-              src={`${IMAGE_BASE_URL}/uploads/${item.image}`}
-              alt={item.title}
-            />
+  src={item.image}
+  alt={item.title}
+/>
+
 
             <div className="marketplace-content">
               <h3>{item.title}</h3>

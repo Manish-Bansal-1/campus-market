@@ -17,32 +17,39 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
 // CREATE ITEM
 // Inside backend/routes/Item.js
 
 // 1. Update Create Route
-router.post('/add', auth, upload.single('image'), async (req, res) => {
+router.post("/add", auth, upload.single("image"), async (req, res) => {
   try {
-    console.log("BODY =>", req.body);
-    console.log("FILE =>", req.file);
+    let imageUrl = "";
+
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+      imageUrl = result.secure_url;
+    }
 
     const newItem = new Item({
       title: req.body.title,
       description: req.body.description,
       price: req.body.price,
       category: req.body.category,
-      image: req.file ? req.file.filename : "",
+      image: imageUrl,
       seller: req.user.id,
     });
 
     const savedItem = await newItem.save();
     res.status(201).json(savedItem);
   } catch (err) {
+    console.log("UPLOAD ERROR =>", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 
 // 2.Get All Route
