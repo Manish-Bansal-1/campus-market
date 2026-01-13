@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import API from "../api/axios";
 import { io } from "socket.io-client";
 
-// ✅ IMPORTANT: websocket + polling dono allow (Render/Vercel fix)
-const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+
+const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
   withCredentials: true,
 });
@@ -17,15 +19,25 @@ const Chat = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // ✅ Debug logs (optional)
+  // ✅ Debug logs
   useEffect(() => {
-    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
-    socket.on("connect_error", (err) =>
-      console.log("❌ Socket connect error:", err.message)
-    );
+    console.log("🔌 SOCKET_URL =", SOCKET_URL);
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected:", socket.id);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("⚠️ Socket disconnected");
+    });
+
+    socket.on("connect_error", (err) => {
+      console.log("❌ Socket connect error:", err.message);
+    });
 
     return () => {
       socket.off("connect");
+      socket.off("disconnect");
       socket.off("connect_error");
     };
   }, []);
@@ -37,8 +49,8 @@ const Chat = () => {
         const res = await API.get(`/chats/single/${chatId}`);
         setChat(res.data);
 
-        // ✅ join room
         socket.emit("joinChat", chatId);
+        console.log("🏠 Joined room:", chatId);
       } catch (err) {
         console.log("LOAD CHAT ERROR:", err.response?.data || err.message);
       }
@@ -47,7 +59,7 @@ const Chat = () => {
     loadChat();
   }, [chatId]);
 
-  // 🔥 RECEIVE MESSAGE LIVE
+  // 🔥 Receive message live
   useEffect(() => {
     const handler = (data) => {
       if (data.chatId !== chatId) return;
@@ -55,16 +67,11 @@ const Chat = () => {
       const senderId =
         typeof data.sender === "object" ? data.sender?._id : data.sender;
 
-      // ❌ apna message dubara add mat karo
       if (senderId === user.id) return;
 
       setChat((prev) => {
         if (!prev) return prev;
-
-        return {
-          ...prev,
-          messages: [...prev.messages, data],
-        };
+        return { ...prev, messages: [...prev.messages, data] };
       });
     };
 
@@ -89,21 +96,18 @@ const Chat = () => {
       createdAt: new Date().toISOString(),
     };
 
-    // ✅ UI me instantly add
+    // UI instantly
     setChat((prev) => ({
       ...prev,
       messages: [...prev.messages, myMsg],
     }));
 
-    // ✅ emit socket
+    // emit live
     socket.emit("sendMessage", myMsg);
 
-    // ✅ save DB
+    // save DB
     try {
-      await API.post("/chats/message", {
-        chatId,
-        text,
-      });
+      await API.post("/chats/message", { chatId, text });
     } catch (err) {
       console.log("SEND ERROR:", err.response?.data || err.message);
     }
