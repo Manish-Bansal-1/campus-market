@@ -3,10 +3,11 @@ import { useParams } from "react-router-dom";
 import API from "../api/axios";
 import { io } from "socket.io-client";
 
-const socket = io(
-  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000",
-  { transports: ["websocket"] }
-);
+// ✅ IMPORTANT: websocket + polling dono allow (Render/Vercel fix)
+const socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:5000", {
+  transports: ["websocket", "polling"],
+  withCredentials: true,
+});
 
 const Chat = () => {
   const { chatId } = useParams();
@@ -16,63 +17,96 @@ const Chat = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  /* 🔹 Load chat */
+  // ✅ Debug logs (optional)
+  useEffect(() => {
+    socket.on("connect", () => console.log("✅ Socket connected:", socket.id));
+    socket.on("connect_error", (err) =>
+      console.log("❌ Socket connect error:", err.message)
+    );
+
+    return () => {
+      socket.off("connect");
+      socket.off("connect_error");
+    };
+  }, []);
+
+  // 🔹 Load chat + join room
   useEffect(() => {
     const loadChat = async () => {
-      const res = await API.get(`/chats/single/${chatId}`);
-      setChat(res.data);
+      try {
+        const res = await API.get(`/chats/single/${chatId}`);
+        setChat(res.data);
 
-      socket.emit("joinChat", chatId);
+        // ✅ join room
+        socket.emit("joinChat", chatId);
+      } catch (err) {
+        console.log("LOAD CHAT ERROR:", err.response?.data || err.message);
+      }
     };
 
     loadChat();
   }, [chatId]);
 
-  /* 🔥 RECEIVE MESSAGE (REAL-TIME) */
+  // 🔥 RECEIVE MESSAGE LIVE
   useEffect(() => {
-    socket.on("receiveMessage", (data) => {
+    const handler = (data) => {
+      if (data.chatId !== chatId) return;
+
+      const senderId =
+        typeof data.sender === "object" ? data.sender?._id : data.sender;
+
       // ❌ apna message dubara add mat karo
-      if (data.chatId === chatId && data.sender !== user.id) {
-        setChat((prev) => ({
+      if (senderId === user.id) return;
+
+      setChat((prev) => {
+        if (!prev) return prev;
+
+        return {
           ...prev,
           messages: [...prev.messages, data],
-        }));
-      }
-    });
+        };
+      });
+    };
 
-    return () => socket.off("receiveMessage");
+    socket.on("receiveMessage", handler);
+
+    return () => socket.off("receiveMessage", handler);
   }, [chatId, user.id]);
 
-  /* 🔹 Auto scroll */
+  // 🔹 Auto scroll
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat]);
 
-  /* 🔹 Send message */
+  // 🔹 Send message
   const sendMessage = async () => {
     if (!text.trim()) return;
 
-    // 1️⃣ Save in DB
-    await API.post("/chats/message", {
-      chatId,
-      text,
-    });
-
-    // 2️⃣ Emit socket (receiver ko milega)
-    socket.emit("sendMessage", {
+    const myMsg = {
       chatId,
       sender: user.id,
       text,
-    });
+      createdAt: new Date().toISOString(),
+    };
 
-    // 3️⃣ UI me apna message add
+    // ✅ UI me instantly add
     setChat((prev) => ({
       ...prev,
-      messages: [
-        ...prev.messages,
-        { sender: user.id, text },
-      ],
+      messages: [...prev.messages, myMsg],
     }));
+
+    // ✅ emit socket
+    socket.emit("sendMessage", myMsg);
+
+    // ✅ save DB
+    try {
+      await API.post("/chats/message", {
+        chatId,
+        text,
+      });
+    } catch (err) {
+      console.log("SEND ERROR:", err.response?.data || err.message);
+    }
 
     setText("");
   };
@@ -86,7 +120,7 @@ const Chat = () => {
       <div style={{ minHeight: "400px" }}>
         {chat.messages.map((msg, i) => {
           const senderId =
-            typeof msg.sender === "object" ? msg.sender._id : msg.sender;
+            typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
 
           const isMe = senderId === user.id;
 
