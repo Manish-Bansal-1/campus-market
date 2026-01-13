@@ -12,12 +12,12 @@ const Home = () => {
   useEffect(() => {
     API.get("/items/all")
       .then((res) => {
-        // ✅ always keep items as array
-        setItems(Array.isArray(res.data) ? res.data : []);
+        // ✅ backend sends: { items: [], total, page, totalPages }
+        setItems(Array.isArray(res.data?.items) ? res.data.items : []);
       })
       .catch((err) => {
         console.error("ITEM FETCH ERROR:", err);
-        setItems([]); // ✅ fallback
+        setItems([]);
       });
   }, []);
 
