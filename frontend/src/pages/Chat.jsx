@@ -3,8 +3,7 @@ import { useParams } from "react-router-dom";
 import API from "../api/axios";
 import { io } from "socket.io-client";
 
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
@@ -19,28 +18,6 @@ const Chat = () => {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // ✅ Debug logs
-  useEffect(() => {
-
-    socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("⚠️ Socket disconnected");
-    });
-
-    socket.on("connect_error", (err) => {
-      console.log("❌ Socket connect error:", err.message);
-    });
-
-    return () => {
-      socket.off("connect");
-      socket.off("disconnect");
-      socket.off("connect_error");
-    };
-  }, []);
-
   // 🔹 Load chat + join room
   useEffect(() => {
     const loadChat = async () => {
@@ -49,7 +26,6 @@ const Chat = () => {
         setChat(res.data);
 
         socket.emit("joinChat", chatId);
-        console.log("🏠 Joined room:", chatId);
       } catch (err) {
         console.log("LOAD CHAT ERROR:", err.response?.data || err.message);
       }
