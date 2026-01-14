@@ -1,23 +1,26 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Item = require('../models/Item');
-const auth = require('../middleware/authMiddleware');
+const Item = require("../models/Item");
+const auth = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
-// CREATE ITEM
-// Inside backend/routes/Item.js
-
-// 1. Update Create Route
+// 1️⃣ CREATE ITEM
 router.post("/add", auth, upload.single("image"), async (req, res) => {
-
   try {
+    console.log("✅ REQ BODY:", req.body);
+    console.log("✅ REQ FILE:", req.file ? "YES" : "NO");
+
     let imageUrl = "";
 
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer);
       imageUrl = result.secure_url;
     }
+
+    // ✅ WhatsApp number optional (cleaned)
+    let whatsappNumber = req.body.whatsappNumber || "";
+    whatsappNumber = whatsappNumber.toString().replace(/\s+/g, "").replace("+", "");
 
     const newItem = new Item({
       title: req.body.title,
@@ -26,9 +29,13 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
       category: req.body.category,
       image: imageUrl,
       seller: req.user.id,
+      whatsappNumber: whatsappNumber, // ✅ SAVE HERE
     });
 
     const savedItem = await newItem.save();
+
+    console.log("✅ SAVED ITEM:", savedItem);
+
     res.status(201).json(savedItem);
   } catch (err) {
     console.log("❌ Add item error:", err.message);
@@ -36,8 +43,7 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
   }
 });
 
-// 2.Get All Route
-
+// 2️⃣ GET ALL ITEMS
 router.get("/all", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -66,14 +72,13 @@ router.get("/all", async (req, res) => {
   }
 });
 
-// DELETE ITEM
-router.delete('/:id', auth, async (req, res) => {
+// 3️⃣ DELETE ITEM
+router.delete("/:id", auth, async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);
-    
+
     if (!item) return res.status(404).json("Item not found");
 
-    // Safety check: Only the owner can delete
     if (item.seller.toString() !== req.user.id) {
       return res.status(401).json("You can only delete your own items!");
     }
@@ -85,8 +90,8 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// 🔹 GET MY LISTINGS (SELLER)
-router.get('/my', auth, async (req, res) => {
+// 4️⃣ GET MY LISTINGS (SELLER)
+router.get("/my", auth, async (req, res) => {
   try {
     const items = await Item.find({ seller: req.user.id });
     res.status(200).json(items);
@@ -95,8 +100,8 @@ router.get('/my', auth, async (req, res) => {
   }
 });
 
-// 🔹 MARK ITEM AS SOLD
-router.put('/sold/:id', auth, async (req, res) => {
+// 5️⃣ MARK ITEM AS SOLD
+router.put("/sold/:id", auth, async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);
 
@@ -114,6 +119,5 @@ router.put('/sold/:id', auth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
