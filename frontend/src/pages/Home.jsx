@@ -4,22 +4,47 @@ import API from "../api/axios";
 
 const Home = () => {
   const [items, setItems] = useState([]);
+
+  // ✅ NEW
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
   // ✅ logged in user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
+  // ✅ Fetch items with retry (Render cold start fix)
+  const fetchItems = async (retries = 3) => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await API.get("/items/all");
+
+      // backend response can be {items: []} OR direct []
+      if (Array.isArray(res.data)) {
+        setItems(res.data);
+      } else {
+        setItems(res.data.items || []);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error("ITEM FETCH ERROR:", err);
+
+      if (retries > 0) {
+        // wait 1.5 sec then retry
+        setTimeout(() => fetchItems(retries - 1), 1500);
+      } else {
+        setLoading(false);
+        setError("Server is waking up... Please refresh in 5 seconds 😅");
+      }
+    }
+  };
+
   useEffect(() => {
-    API.get("/items/all")
-      .then((res) => {
-        // backend response can be {items: []} OR direct []
-        if (Array.isArray(res.data)) {
-          setItems(res.data);
-        } else {
-          setItems(res.data.items || []);
-        }
-      })
-      .catch((err) => console.error("ITEM FETCH ERROR:", err));
+    fetchItems();
   }, []);
 
   const startChat = async (itemId, sellerId) => {
@@ -48,110 +73,125 @@ const Home = () => {
     }
   };
 
-  // ✅ WhatsApp Open function
-  const openWhatsApp = (whatsappNumber, itemTitle) => {
-    if (!whatsappNumber) return;
-
-    const cleanNumber = whatsappNumber.replace(/\s+/g, "").replace("+", "");
-
-    const message = `Hi! I'm interested in your item: ${itemTitle}`;
-    const url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
-      message
-    )}`;
-
-    window.open(url, "_blank");
-  };
-
   return (
     <div className="marketplace-container">
       <h1 className="marketplace-title">Campus Marketplace</h1>
 
-      <div className="marketplace-grid">
-        {Array.isArray(items) &&
-          items.map((item) => {
-            const isMyItem = item.seller?._id === user.id;
-            const hasWhatsapp = !!item.whatsappNumber;
+      {/* ✅ Loading UI */}
+      {loading && (
+        <p style={{ textAlign: "center", color: "#aaa", marginTop: "20px" }}>
+          ⏳ Loading items... (server waking up)
+        </p>
+      )}
 
-            return (
-              <div key={item._id} className="marketplace-card">
-                <img src={item.image} alt={item.title} />
+      {/* ❌ Error UI */}
+      {!loading && error && (
+        <div style={{ textAlign: "center", marginTop: "20px" }}>
+          <p style={{ color: "#ffb3b3" }}>{error}</p>
+          <button
+            onClick={() => fetchItems()}
+            style={{
+              padding: "10px 16px",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+              background: "#3498db",
+              color: "white",
+            }}
+          >
+            Refresh Items
+          </button>
+        </div>
+      )}
 
-                <div className="marketplace-content">
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                  <h2>₹{item.price}</h2>
-                  <p>Seller: {item.seller?.name}</p>
+      {/* ✅ Items */}
+      {!loading && !error && (
+        <div className="marketplace-grid">
+          {Array.isArray(items) &&
+            items.map((item) => {
+              const isMyItem = item.seller?._id === user.id;
 
-                  {/* ✅ Show whatsapp text only if available */}
-                  {item.whatsappNumber && (
-  <p style={{ fontSize: "13px", color: "#333" }}>
-    📱 WhatsApp: {item.whatsappNumber}
-  </p>
-)}
+              return (
+                <div key={item._id} className="marketplace-card">
+                  <img src={item.image} alt={item.title} />
 
-                </div>
+                  <div className="marketplace-content">
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                    <h2>₹{item.price}</h2>
+                    <p>Seller: {item.seller?.name}</p>
 
-                {/* Buttons */}
-                {isMyItem ? (
-                  <button
-                    disabled
-                    style={{
-                      background: "#666",
-                      cursor: "not-allowed",
-                    }}
-                  >
-                    This is your item
-                  </button>
-                ) : (
-                  <div style={{ display: "flex", gap: "10px", padding: "12px" }}>
+                    {/* ✅ WhatsApp show */}
+                    {item.whatsappNumber && (
+                      <p style={{ fontSize: "13px", color: "#333" }}>
+                        📱 WhatsApp: {item.whatsappNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Buttons */}
+                  {isMyItem ? (
                     <button
-                      onClick={() => startChat(item._id, item.seller?._id)}
+                      disabled
                       style={{
-                        flex: 1,
-                        background: "#3498db",
-                        color: "white",
-                        border: "none",
-                        padding: "12px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
+                        background: "#666",
+                        cursor: "not-allowed",
                       }}
                     >
-                      Chat
+                      This is your item
                     </button>
+                  ) : (
+                    <div style={{ display: "flex", gap: "10px", padding: "12px" }}>
+                      <button
+                        onClick={() => startChat(item._id, item.seller?._id)}
+                        style={{
+                          flex: 1,
+                          background: "#3498db",
+                          color: "white",
+                          border: "none",
+                          padding: "12px",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Chat
+                      </button>
 
-                    {/* ✅ WhatsApp button ONLY if number exists */}
-                    {item.whatsappNumber && (
-  <button
-    onClick={() => {
-      const cleanNumber = item.whatsappNumber
-        .replace(/\s+/g, "")
-        .replace("+", "");
+                      {/* ✅ WhatsApp button ONLY if number exists */}
+                      {item.whatsappNumber && (
+                        <button
+                          onClick={() => {
+                            const cleanNumber = item.whatsappNumber
+                              .replace(/\s+/g, "")
+                              .replace("+", "");
 
-      const msg = `Hi! I'm interested in your item: ${item.title}`;
-      window.open(
-        `https://wa.me/${cleanNumber}?text=${encodeURIComponent(msg)}`,
-        "_blank"
-      );
-    }}
-    style={{
-      background: "#25D366",
-      color: "white",
-      border: "none",
-      padding: "12px",
-      cursor: "pointer",
-      marginTop: "8px",
-    }}
-  >
-    WhatsApp Seller
-  </button>
-)}
-
-                  </div>
-                )}
-              </div>
-            );
-          })}
-      </div>
+                            const msg = `Hi! I'm interested in your item: ${item.title}`;
+                            window.open(
+                              `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
+                                msg
+                              )}`,
+                              "_blank"
+                            );
+                          }}
+                          style={{
+                            background: "#25D366",
+                            color: "white",
+                            border: "none",
+                            padding: "12px",
+                            cursor: "pointer",
+                            borderRadius: "8px",
+                          }}
+                        >
+                          WhatsApp
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </div>
+      )}
     </div>
   );
 };
