@@ -48,7 +48,15 @@ const Register = () => {
       alert("Registration successful! Please login.");
       navigate("/login");
     } catch (err) {
-      alert(err.response?.data?.message || "Registration failed");
+      console.log("REGISTER ERROR FULL:", err);
+      console.log("REGISTER ERROR RESPONSE:", err.response?.data);
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          "Registration failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -102,6 +110,7 @@ const Register = () => {
             marginTop: "16px",
           }}
         >
+          {/* Name */}
           <input
             type="text"
             placeholder="Full Name (required)"
@@ -111,6 +120,7 @@ const Register = () => {
             style={inputStyle}
           />
 
+          {/* Username */}
           <input
             type="text"
             placeholder="Username (unique, required)"
@@ -120,17 +130,28 @@ const Register = () => {
             style={inputStyle}
           />
 
+          {/* Year + Gender */}
           <div style={{ display: "flex", gap: "10px" }}>
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
               style={selectStyle}
             >
-              <option value="">Year (optional)</option>
-              <option value="1st">1st Year</option>
-              <option value="2nd">2nd Year</option>
-              <option value="3rd">3rd Year</option>
-              <option value="4th">4th Year</option>
+              <option value="" style={{ color: "#111827" }}>
+                Year (optional)
+              </option>
+              <option value="1st" style={{ color: "#111827" }}>
+                1st Year
+              </option>
+              <option value="2nd" style={{ color: "#111827" }}>
+                2nd Year
+              </option>
+              <option value="3rd" style={{ color: "#111827" }}>
+                3rd Year
+              </option>
+              <option value="4th" style={{ color: "#111827" }}>
+                4th Year
+              </option>
             </select>
 
             <select
@@ -138,13 +159,22 @@ const Register = () => {
               onChange={(e) => setGender(e.target.value)}
               style={selectStyle}
             >
-              <option value="">Gender (optional)</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="not_preferred">Not Preferred</option>
+              <option value="" style={{ color: "#111827" }}>
+                Gender (optional)
+              </option>
+              <option value="male" style={{ color: "#111827" }}>
+                Male
+              </option>
+              <option value="female" style={{ color: "#111827" }}>
+                Female
+              </option>
+              <option value="not_preferred" style={{ color: "#111827" }}>
+                Not Preferred
+              </option>
             </select>
           </div>
 
+          {/* Password */}
           <input
             type="password"
             placeholder="Password (required)"
@@ -207,6 +237,8 @@ const selectStyle = {
   fontSize: "14px",
   background: "rgba(255,255,255,0.06)",
   color: "white",
+  appearance: "none",
+  WebkitAppearance: "none",
 };
 
 export default Register;
