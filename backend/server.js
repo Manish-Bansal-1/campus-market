@@ -11,6 +11,7 @@ const rateLimit = require("express-rate-limit");
 const authRoutes = require("./routes/auth");
 const itemRoutes = require("./routes/product");
 const chatRoutes = require("./routes/chats");
+const adRoutes = require("./routes/ads");
 
 const app = express();
 const server = http.createServer(app);
@@ -105,8 +106,7 @@ app.use("/api/chats", (req, res, next) => {
   req.io = io; // ✅ io available in routes
   next();
 }, chatRoutes);
-
-
+app.use("/api/ads", adRoutes);
 
 /* =====================
    🗄️ DATABASE

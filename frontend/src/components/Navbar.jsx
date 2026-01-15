@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import API from "../api/axios";
 import { io } from "socket.io-client";
 
@@ -17,13 +17,20 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // ✅ hide navbar on scroll down (mobile)
+  const [hideNav, setHideNav] = useState(false);
+  const lastScrollY = useRef(0);
+
+  // ✅ click outside
+  const navRef = useRef(null);
+
   const handleLogout = () => {
     localStorage.clear();
     setMenuOpen(false);
     navigate("/login");
   };
 
-  // 🔔 function to fetch unread count
+  // 🔔 fetch unread
   const fetchUnread = async () => {
     if (!token) return;
     try {
@@ -34,7 +41,6 @@ const Navbar = () => {
     }
   };
 
-  // ✅ On load unread fetch
   useEffect(() => {
     fetchUnread();
   }, [token]);
@@ -43,79 +49,150 @@ const Navbar = () => {
   useEffect(() => {
     if (!token) return;
 
-    const handler = () => {
-      fetchUnread();
-    };
-
+    const handler = () => fetchUnread();
     socket.on("unreadUpdate", handler);
 
-    return () => {
-      socket.off("unreadUpdate", handler);
-    };
+    return () => socket.off("unreadUpdate", handler);
   }, [token]);
 
+  // ✅ Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!navRef.current) return;
+      if (!navRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, []);
+
+  // ✅ Hide navbar on scroll down ONLY MOBILE
+  useEffect(() => {
+    const handleScroll = () => {
+      // if menu open, keep navbar visible
+      if (menuOpen) return;
+
+      const currentY = window.scrollY;
+      const diff = currentY - lastScrollY.current;
+
+      // only work on mobile width
+      const isMobile = window.innerWidth <= 768;
+
+      if (isMobile) {
+        // small scroll ignore
+        if (Math.abs(diff) < 10) return;
+
+        if (diff > 0 && currentY > 80) {
+          // scrolling down
+          setHideNav(true);
+        } else {
+          // scrolling up
+          setHideNav(false);
+        }
+      }
+
+      lastScrollY.current = currentY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [menuOpen]);
+
   return (
-    <div className="navbar">
-      <div className="navbar-top">
-        <div className="navbar-logo" onClick={() => navigate("/")}>
-          Campus Market
-        </div>
+    <>
+      {/* ✅ Overlay blur when menu open */}
+      {menuOpen && (
+        <div
+          className="nav-overlay"
+          onClick={() => setMenuOpen(false)}
+        ></div>
+      )}
 
-        {/* 🍔 Mobile menu button */}
-        <button
-          className="navbar-toggle"
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          {menuOpen ? "✖" : "☰"}
-        </button>
-      </div>
+      <div className={`navbar ${hideNav ? "hide" : ""}`} ref={navRef}>
+        <div className="navbar-inner">
+          <div className="navbar-left">
+            <div
+              className="navbar-logo"
+              onClick={() => {
+                setMenuOpen(false);
+                navigate("/");
+              }}
+            >
+              Campus Market
+            </div>
 
-      {/* Links */}
-      <div className={`navbar-links ${menuOpen ? "open" : ""}`}>
-        <Link className="nav-link" to="/" onClick={() => setMenuOpen(false)}>
-          Home
-        </Link>
+            {/* 🍔 Mobile toggle */}
+            <button
+              className="navbar-toggle"
+              onClick={() => setMenuOpen((prev) => !prev)}
+            >
+              {menuOpen ? "✖" : "☰"}
+            </button>
+          </div>
 
-        {token && (
-          <Link className="nav-link" to="/sell" onClick={() => setMenuOpen(false)}>
-            Sell Item
-          </Link>
-        )}
+          {/* Links */}
+          <div className={`navbar-links ${menuOpen ? "open" : ""}`}>
+            <Link className="nav-link" to="/" onClick={() => setMenuOpen(false)}>
+              Home
+            </Link>
 
-        {token && (
-          <Link
-            className="nav-link"
-            to="/messages"
-            onClick={() => setMenuOpen(false)}
-          >
-            Messages
-            {unreadCount > 0 && (
-              <span className="nav-badge">{unreadCount}</span>
+            {token && (
+              <Link
+                className="nav-link"
+                to="/sell"
+                onClick={() => setMenuOpen(false)}
+              >
+                Sell Item
+              </Link>
             )}
-          </Link>
-        )}
 
-        {token && (
-          <Link
-            className="nav-link"
-            to="/my-listings"
-            onClick={() => setMenuOpen(false)}
-          >
-            My Listings
-          </Link>
-        )}
+            {token && (
+              <Link
+                className="nav-link"
+                to="/messages"
+                onClick={() => setMenuOpen(false)}
+              >
+                Messages
+                {unreadCount > 0 && (
+                  <span className="nav-badge">{unreadCount}</span>
+                )}
+              </Link>
+            )}
 
-        {token ? (
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        ) : (
-          <Link className="nav-link" to="/login" onClick={() => setMenuOpen(false)}>
-            Login
-          </Link>
-        )}
+            {token && (
+              <Link
+                className="nav-link"
+                to="/my-listings"
+                onClick={() => setMenuOpen(false)}
+              >
+                My Listings
+              </Link>
+            )}
+
+            {token ? (
+              <button className="logout-btn" onClick={handleLogout}>
+                Logout
+              </button>
+            ) : (
+              <Link
+                className="nav-link"
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

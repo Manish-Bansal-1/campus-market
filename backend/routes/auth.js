@@ -5,38 +5,61 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 
 /* ======================
-   REGISTER (USERNAME)
+   REGISTER
 ====================== */
 router.post("/register", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { name, username, password, year, gender } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: "Username & password required" });
+    if (!name || !username || !password) {
+      return res
+        .status(400)
+        .json({ message: "Name, username & password required" });
     }
 
-    const exists = await User.findOne({ username });
+    const cleanName = name.trim();
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (cleanUsername.includes(" ")) {
+      return res.status(400).json({ message: "Username cannot contain spaces" });
+    }
+
+    const exists = await User.findOne({ username: cleanUsername });
     if (exists) {
       return res.status(400).json({ message: "Username already taken" });
     }
 
+    // ✅ Optional safe values
+    const safeYear = ["1st", "2nd", "3rd", "4th"].includes(year) ? year : "";
+    const safeGender = ["male", "female", "not_preferred"].includes(gender)
+      ? gender
+      : "";
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      username,
+      name: cleanName,
+      username: cleanUsername,
       password: hashedPassword,
+      year: safeYear,
+      gender: safeGender,
     });
 
     await user.save();
 
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
+    // Duplicate key error safety
+    if (err.code === 11000) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+
     res.status(500).json({ error: err.message });
   }
 });
 
 /* ======================
-   LOGIN (USERNAME)
+   LOGIN
 ====================== */
 router.post("/login", async (req, res) => {
   try {
@@ -46,7 +69,9 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Username & password required" });
     }
 
-    const user = await User.findOne({ username });
+    const cleanUsername = username.trim().toLowerCase();
+
+    const user = await User.findOne({ username: cleanUsername });
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -57,7 +82,7 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
@@ -66,7 +91,11 @@ router.post("/login", async (req, res) => {
       token,
       user: {
         id: user._id,
+        name: user.name,
         username: user.username,
+        role: user.role,
+        year: user.year || "",
+        gender: user.gender || "",
       },
     });
   } catch (err) {
