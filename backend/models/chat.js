@@ -2,50 +2,25 @@ const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema(
   {
-    sender: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
-    text: String,
-    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    text: { type: String, required: true },
   },
   { timestamps: true }
 );
 
 const chatSchema = new mongoose.Schema(
   {
-    item: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Item",
-      required: true,
-    },
-    buyer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    seller: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    item: { type: mongoose.Schema.Types.ObjectId, ref: "Item", required: true },
+    buyer: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    seller: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
     messages: [messageSchema],
 
-    unreadCount: {
-      type: Number,
-      default: 0,
-    },
+    // unread count ONLY for receiver side (we keep single counter for simplicity)
+    unreadCount: { type: Number, default: 0 },
 
-    // ✅ SOFT DELETE FLAGS
-    deletedByBuyer: {
-      type: Boolean,
-      default: false,
-    },
-    deletedBySeller: {
-      type: Boolean,
-      default: false,
-    },
+    deletedByBuyer: { type: Boolean, default: false },
+    deletedBySeller: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

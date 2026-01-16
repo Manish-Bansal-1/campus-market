@@ -20,7 +20,10 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
 
     // ✅ WhatsApp number optional (cleaned)
     let whatsappNumber = req.body.whatsappNumber || "";
-    whatsappNumber = whatsappNumber.toString().replace(/\s+/g, "").replace("+", "");
+    whatsappNumber = whatsappNumber
+      .toString()
+      .replace(/\s+/g, "")
+      .replace("+", "");
 
     const newItem = new Item({
       title: req.body.title,
@@ -29,7 +32,7 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
       category: req.body.category,
       image: imageUrl,
       seller: req.user.id,
-      whatsappNumber: whatsappNumber, // ✅ SAVE HERE
+      whatsappNumber: whatsappNumber,
     });
 
     const savedItem = await newItem.save();
@@ -55,7 +58,8 @@ router.get("/all", async (req, res) => {
     const total = await Item.countDocuments(query);
 
     const items = await Item.find(query)
-      .populate("seller", "name _id")
+      // ✅ FIX: now send seller name + username + year + gender
+      .populate("seller", "name username year gender _id")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

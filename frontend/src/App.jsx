@@ -1,4 +1,11 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+
 import Navbar from "./components/Navbar";
 
 import Home from "./pages/Home";
@@ -15,15 +22,8 @@ function AdminRoute({ children }) {
   const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-  // not logged in
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // not admin
-  if (user?.role !== "admin") {
-    return <Navigate to="/" replace />;
-  }
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role !== "admin") return <Navigate to="/" replace />;
 
   return children;
 }
@@ -33,8 +33,7 @@ function AppLayout() {
 
   // 🔥 NAVBAR HIDE ON AUTH PAGES
   const hideNavbar =
-    location.pathname === "/login" ||
-    location.pathname === "/register";
+    location.pathname === "/login" || location.pathname === "/register";
 
   return (
     <>
@@ -44,12 +43,19 @@ function AppLayout() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+
+        {/* ✅ SELL PAGE */}
         <Route path="/sell" element={<CreateListing />} />
-        <Route path="/messages" element={<Inbox />} />
+
+        {/* ✅ CHATS LIST PAGE */}
+        <Route path="/chats" element={<Inbox />} />
+
+        {/* ✅ SINGLE CHAT PAGE */}
         <Route path="/chat/:chatId" element={<Chat />} />
+
         <Route path="/my-listings" element={<MyListings />} />
 
-        {/* ✅ ADMIN ROUTE (protected) */}
+        {/* ✅ ADMIN ROUTE */}
         <Route
           path="/admin/ads"
           element={
