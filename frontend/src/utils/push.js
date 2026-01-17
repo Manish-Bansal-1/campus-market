@@ -1,90 +1,92 @@
-import API from "../api/axios";
+// frontend/src/utils/push.js
+
+const PUBLIC_VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+// ✅ LocalStorage key (so we don't annoy user again and again)
+const PUSH_ENABLED_KEY = "pushEnabledOnce";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 
-  const rawData = atob(base64);
+  const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
 
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
+
   return outputArray;
 }
 
-export const enablePushNotifications = async () => {
+export const enablePushNotifications = async (token) => {
   try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("⛔ Please login first to enable notifications");
-      return false;
-    }
-
     if (!("serviceWorker" in navigator)) {
-      alert("❌ Service Worker not supported");
-      return false;
+      console.log("❌ Service Worker not supported");
+      return { success: false, message: "Service Worker not supported" };
     }
 
     if (!("PushManager" in window)) {
-      alert("❌ Push not supported in this browser");
-      return false;
+      console.log("❌ PushManager not supported");
+      return { success: false, message: "Push not supported" };
     }
 
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!vapidKey) {
-      alert("❌ Missing VITE_VAPID_PUBLIC_KEY");
-      return false;
+    if (!PUBLIC_VAPID_KEY) {
+      console.log("❌ Missing VITE_VAPID_PUBLIC_KEY");
+      return { success: false, message: "Missing VAPID key" };
     }
 
-    console.log("🔔 Notification.permission:", Notification.permission);
-
-    if (Notification.permission === "denied") {
-      alert(
-        "❌ Notifications are BLOCKED.\n\nFix:\n🔒 Site settings → Notifications → Allow"
-      );
-      return false;
-    }
-
-    // ✅ register SW
+    // ✅ Register service worker
     const registration = await navigator.serviceWorker.register("/sw.js");
     console.log("✅ SW registered:", registration);
 
-    // ✅ permission request
+    // ✅ Ask permission
     const permission = await Notification.requestPermission();
     console.log("🔔 Permission result:", permission);
 
     if (permission !== "granted") {
-      alert("❌ Permission not granted");
-      return false;
+      return { success: false, message: "Permission denied" };
     }
 
-    // ✅ existing subscription
-    const existingSub = await registration.pushManager.getSubscription();
+    // ✅ Create / get subscription
+    let subscription = await registration.pushManager.getSubscription();
 
-    const subscription =
-      existingSub ||
-      (await registration.pushManager.subscribe({
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      }));
+        applicationServerKey: urlBase64ToUint8Array(PUBLIC_VAPID_KEY),
+      });
+    }
 
     console.log("✅ Subscription ready:", subscription);
 
-    console.log("📡 Sending subscription to backend...");
+    // ✅ Send subscription to backend
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/push/subscribe`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscription }),
+      }
+    );
 
-    const res = await API.post("/push/subscribe", subscription);
+    const data = await res.json();
+    console.log("✅ Backend response:", data);
 
-    console.log("✅ Backend response:", res.data);
+    // ✅ Mark as enabled once
+    localStorage.setItem(PUSH_ENABLED_KEY, "true");
 
-    alert("✅ Notifications enabled successfully!");
-    return true;
+    return { success: true, message: "Subscribed" };
   } catch (err) {
-    console.log("❌ PUSH ERROR FULL:", err);
-    console.log("❌ PUSH ERROR MSG:", err.message);
-    alert("❌ Push enable failed: " + (err.response?.status || err.message));
-    return false;
+    console.log("❌ Push error:", err);
+    return { success: false, message: "Push setup failed" };
   }
+};
+
+// ✅ This function tells UI whether to show success popup or not
+export const shouldShowPushSuccessPopup = () => {
+  return localStorage.getItem(PUSH_ENABLED_KEY) !== "true";
 };
