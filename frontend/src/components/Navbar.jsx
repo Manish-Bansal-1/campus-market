@@ -5,6 +5,7 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
+// ✅ socket outside component (important)
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
   withCredentials: true,
@@ -22,6 +23,7 @@ const Navbar = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
+  // ✅ Fetch unread count
   const fetchUnreadCount = async () => {
     if (!token) return;
     try {
@@ -32,14 +34,18 @@ const Navbar = () => {
     }
   };
 
+  // ✅ join user room for socket updates
   useEffect(() => {
     if (user?.id) socket.emit("joinUser", user.id);
   }, [user?.id]);
 
+  // 1st load + whenever token changes
   useEffect(() => {
     fetchUnreadCount();
+    // eslint-disable-next-line
   }, [token]);
 
+  // 🔔 live unread update
   useEffect(() => {
     if (!token) return;
 
@@ -51,11 +57,14 @@ const Navbar = () => {
     return () => socket.off("unreadUpdate", handler);
   }, [token]);
 
+  // ✅ Hide navbar on scroll down
   useEffect(() => {
     const handleScroll = () => {
       const currentY = window.scrollY;
+
       if (currentY > lastScrollY.current && currentY > 80) setHideNav(true);
       else setHideNav(false);
+
       lastScrollY.current = currentY;
     };
 
@@ -72,6 +81,7 @@ const Navbar = () => {
 
   return (
     <>
+      {/* Overlay */}
       {menuOpen && (
         <div
           style={{
@@ -84,6 +94,7 @@ const Navbar = () => {
         />
       )}
 
+      {/* NAVBAR */}
       <div
         style={{
           position: "sticky",
@@ -105,6 +116,7 @@ const Navbar = () => {
             gap: "10px",
           }}
         >
+          {/* LOGO */}
           <div
             style={{ color: "white", fontWeight: 900, cursor: "pointer" }}
             onClick={() => navigate("/")}
@@ -112,9 +124,11 @@ const Navbar = () => {
             Campus Market
           </div>
 
+          {/* MENU BUTTON + BADGE */}
           <button
             onClick={() => setMenuOpen((p) => !p)}
             style={{
+              position: "relative",
               background: "rgba(255,255,255,0.10)",
               border: "1px solid rgba(255,255,255,0.16)",
               color: "white",
@@ -123,11 +137,38 @@ const Navbar = () => {
               cursor: "pointer",
               fontWeight: 900,
             }}
+            aria-label="Toggle menu"
           >
             ☰
+
+            {/* 🔥 Badge on menu icon */}
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-6px",
+                  right: "-6px",
+                  minWidth: "18px",
+                  height: "18px",
+                  padding: "0 6px",
+                  borderRadius: "999px",
+                  background: "#ef4444",
+                  color: "white",
+                  fontSize: "11px",
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #0b1220",
+                }}
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
           </button>
         </div>
 
+        {/* MENU LINKS */}
         {menuOpen && (
           <div
             style={{
@@ -159,7 +200,7 @@ const Navbar = () => {
                     fontWeight: 900,
                   }}
                 >
-                  {unreadCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </Link>
@@ -173,6 +214,7 @@ const Navbar = () => {
                 >
                   🔐 Login
                 </Link>
+
                 <Link
                   to="/register"
                   onClick={() => setMenuOpen(false)}
