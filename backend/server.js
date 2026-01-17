@@ -12,6 +12,7 @@ const authRoutes = require("./routes/auth");
 const itemRoutes = require("./routes/product");
 const chatRoutes = require("./routes/chats");
 const adRoutes = require("./routes/ads");
+const pushRoutes = require("./routes/push");
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +38,7 @@ const addItemLimiter = rateLimit({
 });
 
 app.use("/api/items/add", addItemLimiter);
+app.use("/api/push", pushRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

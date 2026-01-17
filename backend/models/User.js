@@ -1,8 +1,18 @@
 const mongoose = require("mongoose");
 
+const PushSubscriptionSchema = new mongoose.Schema(
+  {
+    endpoint: String,
+    keys: {
+      p256dh: String,
+      auth: String,
+    },
+  },
+  { _id: false }
+);
+
 const UserSchema = new mongoose.Schema(
   {
-    // ✅ Name (NOT unique)
     name: {
       type: String,
       required: true,
@@ -11,7 +21,6 @@ const UserSchema = new mongoose.Schema(
       maxlength: 40,
     },
 
-    // ✅ Username (unique login)
     username: {
       type: String,
       required: true,
@@ -22,14 +31,12 @@ const UserSchema = new mongoose.Schema(
       maxlength: 20,
     },
 
-    // ✅ Optional Year
     year: {
       type: String,
       enum: ["", "1st", "2nd", "3rd", "4th"],
       default: "",
     },
 
-    // ✅ Optional Gender
     gender: {
       type: String,
       enum: ["", "male", "female", "not_preferred"],
@@ -45,6 +52,12 @@ const UserSchema = new mongoose.Schema(
       type: String,
       enum: ["user", "admin"],
       default: "user",
+    },
+
+    // ✅ push notifications
+    pushSubscription: {
+      type: PushSubscriptionSchema,
+      default: null,
     },
   },
   { timestamps: true }

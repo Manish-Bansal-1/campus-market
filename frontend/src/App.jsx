@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -17,6 +18,8 @@ import Chat from "./pages/Chat";
 import MyListings from "./pages/MyListings";
 import AdminAds from "./pages/AdminAds";
 
+import { registerPush } from "./utils/push";
+
 // ✅ Admin Protected Route Component
 function AdminRoute({ children }) {
   const token = localStorage.getItem("token");
@@ -30,6 +33,11 @@ function AdminRoute({ children }) {
 
 function AppLayout() {
   const location = useLocation();
+
+  // ✅ PUSH REGISTER (1 time)
+  useEffect(() => {
+    registerPush();
+  }, []);
 
   // 🔥 NAVBAR HIDE ON AUTH PAGES
   const hideNavbar =
@@ -53,6 +61,7 @@ function AppLayout() {
         {/* ✅ SINGLE CHAT PAGE */}
         <Route path="/chat/:chatId" element={<Chat />} />
 
+        {/* ✅ MY LISTINGS */}
         <Route path="/mylistings" element={<MyListings />} />
 
         {/* ✅ ADMIN ROUTE */}

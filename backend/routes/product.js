@@ -4,6 +4,7 @@ const Item = require("../models/Item");
 const auth = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
+const { sendPushToAllUsers } = require("../utils/sendPush");
 
 // 1️⃣ CREATE ITEM
 router.post("/add", auth, upload.single("image"), async (req, res) => {
@@ -38,6 +39,12 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
     const savedItem = await newItem.save();
 
     console.log("✅ SAVED ITEM:", savedItem);
+
+await sendPushToAllUsers({
+  title: "🆕 New Listing Added",
+  body: `${savedItem.title} for ₹${savedItem.price}`,
+  url: "/",
+});
 
     res.status(201).json(savedItem);
   } catch (err) {
@@ -117,8 +124,47 @@ router.put("/sold/:id", auth, async (req, res) => {
 
     item.isSold = true;
     await item.save();
+    await sendPushToAllUsers({
+  title: "✅ Item Sold",
+  body: `${item.title} has been marked as SOLD`,
+  url: "/",
+});
+
 
     res.status(200).json("Item marked as sold");
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6️⃣ UPDATE ITEM (EDIT LISTING)
+router.put("/update/:id", auth, async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+
+    if (!item) return res.status(404).json({ error: "Item not found" });
+
+    // only owner can edit
+    if (item.seller.toString() !== req.user.id) {
+      return res.status(401).json({ error: "Not authorized" });
+    }
+
+    const { title, price, description, whatsappNumber } = req.body;
+
+    if (title !== undefined) item.title = title;
+    if (price !== undefined) item.price = price;
+    if (description !== undefined) item.description = description;
+
+    if (whatsappNumber !== undefined) {
+      item.whatsappNumber = whatsappNumber
+        .toString()
+        .replace(/\s+/g, "")
+        .replace("+", "");
+    }
+
+    await item.save();
+
+    res.json(item);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
