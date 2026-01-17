@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { io } from "socket.io-client";
+import SEO from "../components/SEO";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
@@ -65,12 +66,12 @@ const Inbox = () => {
     const handler = ({ chatId, action }) => {
       if (!chatId) return;
 
-      // best stable: just refetch list (but not on every message)
-      // here we update small changes only:
       if (action === "increment") {
         setChats((prev) =>
           prev.map((c) =>
-            c._id === chatId ? { ...c, unreadCount: (c.unreadCount || 0) + 1 } : c
+            c._id === chatId
+              ? { ...c, unreadCount: (c.unreadCount || 0) + 1 }
+              : c
           )
         );
       }
@@ -90,6 +91,11 @@ const Inbox = () => {
   if (!token) {
     return (
       <div style={{ padding: "30px", color: "white" }}>
+        <SEO
+          title="Chats"
+          description="Login to view your chats on Campus Market."
+          url="https://campusmarks.vercel.app/chats"
+        />
         <h2>Please login first</h2>
       </div>
     );
@@ -103,6 +109,13 @@ const Inbox = () => {
         padding: "18px 14px 40px",
       }}
     >
+      {/* ✅ SEO */}
+      <SEO
+        title="Chats"
+        description="View your conversations and messages on Campus Market."
+        url="https://campusmarks.vercel.app/chats"
+      />
+
       <div className="chats-header">
         <div>
           <h1 className="chats-title">💬 Chats</h1>
@@ -142,8 +155,13 @@ const Inbox = () => {
 
             return (
               <div key={c._id} className="chat-card">
-                <div className="chat-left" onClick={() => navigate(`/chat/${c._id}`)}>
-                  <div className="chat-avatar">{otherName?.[0]?.toUpperCase() || "U"}</div>
+                <div
+                  className="chat-left"
+                  onClick={() => navigate(`/chat/${c._id}`)}
+                >
+                  <div className="chat-avatar">
+                    {otherName?.[0]?.toUpperCase() || "U"}
+                  </div>
 
                   <div className="chat-info">
                     <div className="chat-top">
@@ -157,7 +175,9 @@ const Inbox = () => {
                 </div>
 
                 <div className="chat-actions">
-                  {c.unreadCount > 0 && <div className="chat-unread">{c.unreadCount}</div>}
+                  {c.unreadCount > 0 && (
+                    <div className="chat-unread">{c.unreadCount}</div>
+                  )}
 
                   <button
                     className="chat-delete"

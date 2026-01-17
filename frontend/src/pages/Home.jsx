@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import SEO from "../components/SEO";
 
 const ItemCardSkeleton = () => {
   return (
@@ -176,6 +177,13 @@ const Home = () => {
         paddingBottom: "40px",
       }}
     >
+      {/* ✅ SEO */}
+      <SEO
+        title="Home"
+        description="Browse latest campus listings. Buy & sell items inside your college with chat and notifications."
+        url="https://campusmarks.vercel.app/"
+      />
+
       <div className="marketplace-container">
         {/* ===========================
             HEADER

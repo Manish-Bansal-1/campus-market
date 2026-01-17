@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import SEO from "../components/SEO";
 
 const CreateListing = () => {
   const navigate = useNavigate();
@@ -95,6 +96,13 @@ const CreateListing = () => {
 
   return (
     <div className="sell-page">
+      {/* ✅ SEO */}
+      <SEO
+        title="Sell Item"
+        description="Create a new listing on Campus Market. Post your item and start getting chats instantly."
+        url="https://campusmarks.vercel.app/sell"
+      />
+
       <div className="sell-card">
         <div className="sell-top">
           <div>

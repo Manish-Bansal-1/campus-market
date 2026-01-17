@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
+import SEO from "../components/SEO";
 
 const MyListings = () => {
   const [items, setItems] = useState([]);
@@ -103,6 +104,13 @@ const MyListings = () => {
         padding: "18px 14px 40px",
       }}
     >
+      {/* ✅ SEO */}
+      <SEO
+        title="My Listings"
+        description="Manage your listings: edit, delete, and mark items as sold on Campus Market."
+        url="https://campusmarks.vercel.app/mylistings"
+      />
+
       {/* HEADER */}
       <div
         style={{
@@ -175,14 +183,13 @@ const MyListings = () => {
         </div>
       ) : (
         <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 360px))",
-    justifyContent: "center",
-    gap: "14px",
-  }}
->
-
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 360px))",
+            justifyContent: "center",
+            gap: "14px",
+          }}
+        >
           {items.map((item) => (
             <div
               key={item._id}
@@ -349,7 +356,14 @@ const MyListings = () => {
               ✏️ Edit Listing
             </h2>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                marginTop: "14px",
+              }}
+            >
               <input
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
