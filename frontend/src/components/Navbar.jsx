@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import { io } from "socket.io-client";
+import { enablePushNotifications } from "../utils/push";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
-// ✅ socket outside component
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
   withCredentials: true,
@@ -17,18 +17,22 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hideNav, setHideNav] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  // 🔥 NEW: auto show banner after login
+  const [showPushBanner, setShowPushBanner] = useState(false);
 
   const lastScrollY = useRef(0);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
-  // ✅ Join user room (for unread updates)
+  // ✅ Join user room
   useEffect(() => {
     if (user?.id) socket.emit("joinUser", user.id);
   }, [user?.id]);
 
-  // ✅ Fetch unread count
+  // ✅ unread count
   const fetchUnreadCount = async () => {
     if (!token) return;
 
@@ -40,18 +44,14 @@ const Navbar = () => {
     }
   };
 
-  // first load
   useEffect(() => {
     fetchUnreadCount();
   }, [token]);
 
-  // 🔔 live update
   useEffect(() => {
     if (!token) return;
 
-    const handler = () => {
-      fetchUnreadCount();
-    };
+    const handler = () => fetchUnreadCount();
 
     socket.on("unreadUpdate", handler);
     return () => socket.off("unreadUpdate", handler);
@@ -72,19 +72,55 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // 🔥 NEW: show banner automatically after login if permission is default
+  useEffect(() => {
+    if (!token) return;
+
+    // Browser rule: permission prompt can't show without click
+    // So we show a banner and user clicks once.
+    const permission = Notification?.permission;
+
+    if (permission === "default") {
+      setShowPushBanner(true);
+    } else {
+      setShowPushBanner(false);
+    }
+  }, [token]);
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUnreadCount(0);
     setMenuOpen(false);
+    setShowPushBanner(false);
     navigate("/login");
   };
 
   const closeMenu = () => setMenuOpen(false);
 
+  const handleEnablePush = async () => {
+    try {
+      if (!token) {
+        alert("⛔ Please login first");
+        return;
+      }
+
+      setPushLoading(true);
+
+      const ok = await enablePushNotifications();
+      if (ok) {
+        setShowPushBanner(false);
+      }
+    } catch (err) {
+      console.log("ENABLE PUSH ERROR:", err);
+      alert("❌ Notifications enable failed (check console)");
+    } finally {
+      setPushLoading(false);
+    }
+  };
+
   return (
     <>
-      {/* Overlay */}
       {menuOpen && (
         <div
           style={{
@@ -95,6 +131,70 @@ const Navbar = () => {
           }}
           onClick={() => setMenuOpen(false)}
         />
+      )}
+
+      {/* 🔥 Auto Banner after login */}
+      {token && showPushBanner && (
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 80,
+            background: "rgba(34,197,94,0.15)",
+            borderBottom: "1px solid rgba(34,197,94,0.35)",
+            padding: "10px 14px",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "1100px",
+              margin: "0 auto",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "10px",
+              color: "white",
+              fontWeight: 800,
+            }}
+          >
+            <div>
+              🔔 Enable notifications to get offline chat + listing updates
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={handleEnablePush}
+                disabled={pushLoading}
+                style={{
+                  background: "rgba(34,197,94,0.22)",
+                  border: "1px solid rgba(34,197,94,0.45)",
+                  color: "#22c55e",
+                  padding: "8px 10px",
+                  borderRadius: "12px",
+                  cursor: pushLoading ? "not-allowed" : "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                {pushLoading ? "⏳ Enabling..." : "Allow"}
+              </button>
+
+              <button
+                onClick={() => setShowPushBanner(false)}
+                style={{
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  color: "white",
+                  padding: "8px 10px",
+                  borderRadius: "12px",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                Later
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div
@@ -118,7 +218,6 @@ const Navbar = () => {
             gap: "10px",
           }}
         >
-          {/* Logo */}
           <div
             style={{ color: "white", fontWeight: 900, cursor: "pointer" }}
             onClick={() => navigate("/")}
@@ -126,7 +225,6 @@ const Navbar = () => {
             Campus Market
           </div>
 
-          {/* Desktop Links */}
           <div className="nav-desktop">
             <Link to="/" style={desktopLinkStyle}>
               🏠 Home
@@ -136,7 +234,6 @@ const Navbar = () => {
               ➕ Sell Item
             </Link>
 
-            {/* ✅ My Listings back */}
             {token && (
               <Link to="/mylistings" style={desktopLinkStyle}>
                 📦 My Listings
@@ -145,10 +242,28 @@ const Navbar = () => {
 
             <Link to="/chats" style={desktopLinkStyle}>
               💬 Messages
-              {unreadCount > 0 && (
-                <span style={badgeStyle}>{unreadCount}</span>
-              )}
+              {unreadCount > 0 && <span style={badgeStyle}>{unreadCount}</span>}
             </Link>
+
+            {token && (
+              <button
+                onClick={handleEnablePush}
+                disabled={pushLoading}
+                style={{
+                  background: pushLoading
+                    ? "rgba(255,255,255,0.12)"
+                    : "rgba(34,197,94,0.14)",
+                  border: "1px solid rgba(34,197,94,0.35)",
+                  color: "#22c55e",
+                  padding: "8px 10px",
+                  borderRadius: "12px",
+                  cursor: pushLoading ? "not-allowed" : "pointer",
+                  fontWeight: 900,
+                }}
+              >
+                {pushLoading ? "⏳ Enabling..." : "🔔 Enable Notifications"}
+              </button>
+            )}
 
             {!token ? (
               <>
@@ -166,7 +281,6 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Hamburger */}
           <button
             onClick={() => setMenuOpen((p) => !p)}
             style={{
@@ -184,7 +298,6 @@ const Navbar = () => {
           >
             ☰
 
-            {/* ✅ Badge on hamburger icon */}
             {unreadCount > 0 && (
               <span
                 style={{
@@ -206,7 +319,6 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Mobile Dropdown Menu */}
         {menuOpen && (
           <div
             style={{
@@ -225,7 +337,6 @@ const Navbar = () => {
               ➕ Sell Item
             </Link>
 
-            {/* ✅ My Listings back */}
             {token && (
               <Link to="/mylistings" onClick={closeMenu} style={linkStyle}>
                 📦 My Listings
@@ -250,6 +361,30 @@ const Navbar = () => {
                 </span>
               )}
             </Link>
+
+            {token && (
+              <button
+                onClick={async () => {
+                  closeMenu();
+                  await handleEnablePush();
+                }}
+                disabled={pushLoading}
+                style={{
+                  background: pushLoading
+                    ? "rgba(255,255,255,0.12)"
+                    : "rgba(34,197,94,0.14)",
+                  border: "1px solid rgba(34,197,94,0.35)",
+                  color: "#22c55e",
+                  padding: "10px 12px",
+                  borderRadius: "12px",
+                  cursor: pushLoading ? "not-allowed" : "pointer",
+                  fontWeight: 900,
+                  textAlign: "left",
+                }}
+              >
+                {pushLoading ? "⏳ Enabling..." : "🔔 Enable Notifications"}
+              </button>
+            )}
 
             {!token ? (
               <>
@@ -280,7 +415,6 @@ const Navbar = () => {
           </div>
         )}
 
-        {/* CSS for Desktop/Mobile */}
         <style>{`
           .nav-desktop{
             display: none;
@@ -294,7 +428,6 @@ const Navbar = () => {
             justify-content: center;
           }
 
-          /* Desktop */
           @media (min-width: 900px){
             .nav-desktop{
               display: flex;

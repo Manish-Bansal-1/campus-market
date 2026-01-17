@@ -42,7 +42,6 @@ router.post("/init", auth, async (req, res) => {
 
 /* =========================
    2) GET SINGLE CHAT
-   (Reset unread for opener)
 ========================= */
 router.get("/single/:chatId", auth, async (req, res) => {
   try {
@@ -52,11 +51,9 @@ router.get("/single/:chatId", auth, async (req, res) => {
 
     if (!chat) return res.status(404).json({ error: "Chat not found" });
 
-    // reset unread when opened
     chat.unreadCount = 0;
     await chat.save();
 
-    // notify this user only (navbar refresh)
     if (req.io) {
       req.io.to(req.user.id).emit("unreadUpdate", {
         chatId: chat._id.toString(),
@@ -93,22 +90,21 @@ router.post("/message", auth, async (req, res) => {
         ? chat.seller.toString()
         : chat.buyer.toString();
 
-    // increment unread ONLY for receiver
     chat.unreadCount = (chat.unreadCount || 0) + 1;
 
-    // unhide chat on new msg
     chat.deletedByBuyer = false;
     chat.deletedBySeller = false;
 
     await chat.save();
 
+    // 🔔 Push to receiver (offline also)
     await sendPushToUser(receiverId, {
-  title: "💬 New Message",
-  body: text.trim(),
-  url: `/chat/${chat._id}`,
-});
+      title: "💬 New Message",
+      body: text.trim(),
+      url: "/chats",
+    });
 
-    // 🔥 notify receiver for unread count
+    // 🔥 socket unread update
     if (req.io) {
       req.io.to(receiverId).emit("unreadUpdate", {
         chatId: chat._id.toString(),
@@ -158,14 +154,12 @@ router.get("/my-chats", auth, async (req, res) => {
 });
 
 /* =========================
-   5) UNREAD COUNT (Navbar)
+   5) UNREAD COUNT
 ========================= */
 router.get("/unread-count", auth, async (req, res) => {
   try {
     const userId = req.user.id.toString();
 
-    // count only chats where user is seller OR buyer?
-    // simple: count for all chats where user is participant
     const chats = await Chat.find({
       $expr: {
         $or: [

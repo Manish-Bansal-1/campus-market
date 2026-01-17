@@ -1,7 +1,12 @@
 import axios from "axios";
 
+const RAW_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+// ✅ ensure /api always present
+const baseURL = RAW_BASE.endsWith("/api") ? RAW_BASE : `${RAW_BASE}/api`;
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL,
   withCredentials: true,
 });
 

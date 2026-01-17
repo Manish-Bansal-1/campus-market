@@ -4,14 +4,12 @@ const Item = require("../models/Item");
 const auth = require("../middleware/authMiddleware");
 const upload = require("../middleware/upload");
 const uploadToCloudinary = require("../utils/uploadToCloudinary");
-const { sendPushToAllUsers } = require("../utils/sendPush");
+const { sendPushToUser } = require("../utils/sendPush");
+const User = require("../models/User");
 
 // 1️⃣ CREATE ITEM
 router.post("/add", auth, upload.single("image"), async (req, res) => {
   try {
-    console.log("✅ REQ BODY:", req.body);
-    console.log("✅ REQ FILE:", req.file ? "YES" : "NO");
-
     let imageUrl = "";
 
     if (req.file) {
@@ -19,12 +17,8 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
       imageUrl = result.secure_url;
     }
 
-    // ✅ WhatsApp number optional (cleaned)
     let whatsappNumber = req.body.whatsappNumber || "";
-    whatsappNumber = whatsappNumber
-      .toString()
-      .replace(/\s+/g, "")
-      .replace("+", "");
+    whatsappNumber = whatsappNumber.toString().replace(/\s+/g, "").replace("+", "");
 
     const newItem = new Item({
       title: req.body.title,
@@ -33,18 +27,23 @@ router.post("/add", auth, upload.single("image"), async (req, res) => {
       category: req.body.category,
       image: imageUrl,
       seller: req.user.id,
-      whatsappNumber: whatsappNumber,
+      whatsappNumber,
     });
 
     const savedItem = await newItem.save();
 
-    console.log("✅ SAVED ITEM:", savedItem);
+    // 🔔 Push notification to all users (except seller)
+    const allUsers = await User.find({}, "_id");
 
-await sendPushToAllUsers({
-  title: "🆕 New Listing Added",
-  body: `${savedItem.title} for ₹${savedItem.price}`,
-  url: "/",
-});
+    for (const u of allUsers) {
+      if (u._id.toString() === req.user.id.toString()) continue;
+
+      await sendPushToUser(u._id.toString(), {
+        title: "🆕 New Listing Added",
+        body: `${savedItem.title} - ₹${savedItem.price}`,
+        url: "/",
+      });
+    }
 
     res.status(201).json(savedItem);
   } catch (err) {
@@ -65,7 +64,6 @@ router.get("/all", async (req, res) => {
     const total = await Item.countDocuments(query);
 
     const items = await Item.find(query)
-      // ✅ FIX: now send seller name + username + year + gender
       .populate("seller", "name username year gender _id")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -101,7 +99,7 @@ router.delete("/:id", auth, async (req, res) => {
   }
 });
 
-// 4️⃣ GET MY LISTINGS (SELLER)
+// 4️⃣ GET MY LISTINGS
 router.get("/my", auth, async (req, res) => {
   try {
     const items = await Item.find({ seller: req.user.id });
@@ -124,12 +122,16 @@ router.put("/sold/:id", auth, async (req, res) => {
 
     item.isSold = true;
     await item.save();
-    await sendPushToAllUsers({
-  title: "✅ Item Sold",
-  body: `${item.title} has been marked as SOLD`,
-  url: "/",
-});
 
+    const allUsers = await User.find({}, "_id");
+
+    for (const u of allUsers) {
+      await sendPushToUser(u._id.toString(), {
+        title: "✅ Item Sold",
+        body: `${item.title} has been sold`,
+        url: "/",
+      });
+    }
 
     res.status(200).json("Item marked as sold");
   } catch (err) {
@@ -137,14 +139,13 @@ router.put("/sold/:id", auth, async (req, res) => {
   }
 });
 
-// 6️⃣ UPDATE ITEM (EDIT LISTING)
+// 6️⃣ UPDATE ITEM
 router.put("/update/:id", auth, async (req, res) => {
   try {
     const item = await Item.findById(req.params.id);
 
     if (!item) return res.status(404).json({ error: "Item not found" });
 
-    // only owner can edit
     if (item.seller.toString() !== req.user.id) {
       return res.status(401).json({ error: "Not authorized" });
     }

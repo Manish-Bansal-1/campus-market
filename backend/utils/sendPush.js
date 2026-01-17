@@ -2,33 +2,38 @@ const webpush = require("web-push");
 const User = require("../models/User");
 
 webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT,
+  process.env.VAPID_SUBJECT || "mailto:test@campusmarks.com",
   process.env.VAPID_PUBLIC_KEY,
   process.env.VAPID_PRIVATE_KEY
 );
 
-const sendPushToUser = async (userId, payload) => {
-  const user = await User.findById(userId);
-
-  if (!user?.pushSubscription?.endpoint) return;
-
+async function sendPushToUser(userId, payloadObj) {
   try {
-    await webpush.sendNotification(user.pushSubscription, JSON.stringify(payload));
-  } catch (err) {
-    console.log("❌ Push failed:", err.message);
-  }
-};
+    const user = await User.findById(userId);
 
-const sendPushToAllUsers = async (payload) => {
-  const users = await User.find({ pushSubscription: { $ne: null } });
-
-  for (const u of users) {
-    try {
-      await webpush.sendNotification(u.pushSubscription, JSON.stringify(payload));
-    } catch (err) {
-      console.log("❌ Push failed:", err.message);
+    if (!user || !user.pushSubscription?.endpoint) {
+      return false;
     }
-  }
-};
 
-module.exports = { sendPushToUser, sendPushToAllUsers };
+    const payload = JSON.stringify(payloadObj);
+
+    await webpush.sendNotification(user.pushSubscription, payload);
+
+    return true;
+  } catch (err) {
+    console.error("❌ PUSH SEND ERROR:", err.message);
+
+    if (err.statusCode === 410 || err.statusCode === 404) {
+      try {
+        await User.findByIdAndUpdate(userId, { pushSubscription: null });
+        console.log("🧹 Removed invalid push subscription for user:", userId);
+      } catch (e) {
+        console.log("❌ Failed to cleanup subscription:", e.message);
+      }
+    }
+
+    return false;
+  }
+}
+
+module.exports = { sendPushToUser };

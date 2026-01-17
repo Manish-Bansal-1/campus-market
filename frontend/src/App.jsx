@@ -18,7 +18,7 @@ import Chat from "./pages/Chat";
 import MyListings from "./pages/MyListings";
 import AdminAds from "./pages/AdminAds";
 
-import { registerPush } from "./utils/push";
+import { enablePushNotifications } from "./utils/push";
 
 // ✅ Admin Protected Route Component
 function AdminRoute({ children }) {
@@ -34,12 +34,16 @@ function AdminRoute({ children }) {
 function AppLayout() {
   const location = useLocation();
 
-  // ✅ PUSH REGISTER (1 time)
+  // ✅ AUTO ENABLE PUSH AFTER LOGIN
   useEffect(() => {
-    registerPush();
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    // If permission already granted, it will NOT show popup
+    // It will just save subscription to server silently
+    enablePushNotifications();
   }, []);
 
-  // 🔥 NAVBAR HIDE ON AUTH PAGES
   const hideNavbar =
     location.pathname === "/login" || location.pathname === "/register";
 
@@ -52,19 +56,11 @@ function AppLayout() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* ✅ SELL PAGE */}
         <Route path="/sell" element={<CreateListing />} />
-
-        {/* ✅ CHATS LIST PAGE */}
         <Route path="/chats" element={<Inbox />} />
-
-        {/* ✅ SINGLE CHAT PAGE */}
         <Route path="/chat/:chatId" element={<Chat />} />
-
-        {/* ✅ MY LISTINGS */}
         <Route path="/mylistings" element={<MyListings />} />
 
-        {/* ✅ ADMIN ROUTE */}
         <Route
           path="/admin/ads"
           element={

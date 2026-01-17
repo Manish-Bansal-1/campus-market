@@ -1,36 +1,90 @@
 import API from "../api/axios";
 
-export const registerPush = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    if (!("serviceWorker" in navigator)) return;
-    if (!("PushManager" in window)) return;
-
-    // register SW
-    const reg = await navigator.serviceWorker.register("/sw.js");
-
-    // get vapid public key
-    const res = await API.get("/push/public-key");
-    const publicKey = res.data.publicKey;
-
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-
-    await API.post("/push/subscribe", sub);
-    console.log("✅ Push subscription saved");
-  } catch (err) {
-    console.log("❌ Push register error:", err.message);
-  }
-};
-
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
 
-  const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
+
+export const enablePushNotifications = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("⛔ Please login first to enable notifications");
+      return false;
+    }
+
+    if (!("serviceWorker" in navigator)) {
+      alert("❌ Service Worker not supported");
+      return false;
+    }
+
+    if (!("PushManager" in window)) {
+      alert("❌ Push not supported in this browser");
+      return false;
+    }
+
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey) {
+      alert("❌ Missing VITE_VAPID_PUBLIC_KEY");
+      return false;
+    }
+
+    console.log("🔔 Notification.permission:", Notification.permission);
+
+    if (Notification.permission === "denied") {
+      alert(
+        "❌ Notifications are BLOCKED.\n\nFix:\n🔒 Site settings → Notifications → Allow"
+      );
+      return false;
+    }
+
+    // ✅ register SW
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    console.log("✅ SW registered:", registration);
+
+    // ✅ permission request
+    const permission = await Notification.requestPermission();
+    console.log("🔔 Permission result:", permission);
+
+    if (permission !== "granted") {
+      alert("❌ Permission not granted");
+      return false;
+    }
+
+    // ✅ existing subscription
+    const existingSub = await registration.pushManager.getSubscription();
+
+    const subscription =
+      existingSub ||
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      }));
+
+    console.log("✅ Subscription ready:", subscription);
+
+    console.log("📡 Sending subscription to backend...");
+
+    const res = await API.post("/push/subscribe", subscription);
+
+    console.log("✅ Backend response:", res.data);
+
+    alert("✅ Notifications enabled successfully!");
+    return true;
+  } catch (err) {
+    console.log("❌ PUSH ERROR FULL:", err);
+    console.log("❌ PUSH ERROR MSG:", err.message);
+    alert("❌ Push enable failed: " + (err.response?.status || err.message));
+    return false;
+  }
+};

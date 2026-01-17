@@ -38,7 +38,6 @@ const addItemLimiter = rateLimit({
 });
 
 app.use("/api/items/add", addItemLimiter);
-app.use("/api/push", pushRoutes);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -139,6 +138,7 @@ io.on("connection", (socket) => {
 ===================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/push", pushRoutes);
 
 app.use(
   "/api/chats",
