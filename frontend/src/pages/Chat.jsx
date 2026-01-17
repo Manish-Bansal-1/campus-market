@@ -52,6 +52,23 @@ const Chat = () => {
     return buyerId;
   };
 
+  const checkOtherOnline = async (otherId) => {
+  try {
+    const res = await API.get(`/chats/is-online/${otherId}`);
+    setOtherOnline(res.data?.isOnline || false);
+  } catch (err) {
+    console.log("ONLINE CHECK ERROR:", err.response?.data || err.message);
+  }
+};
+
+useEffect(() => {
+  const otherId = getOtherUserId();
+  if (!otherId) return;
+
+  checkOtherOnline(otherId);
+  // eslint-disable-next-line
+}, [chat]);
+
   const fetchSingleChat = async () => {
     try {
       setLoading(true);

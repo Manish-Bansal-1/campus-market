@@ -162,6 +162,14 @@ mongoose
 ===================== */
 const PORT = process.env.PORT || 5000;
 
+app.get("/api/chats/is-online/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  const isOnline = onlineUsers.has(userId);
+
+  res.json({ isOnline });
+});
+
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
