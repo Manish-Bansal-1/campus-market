@@ -98,11 +98,18 @@ router.post("/message", auth, async (req, res) => {
     await chat.save();
 
     // 🔔 Push to receiver (offline also)
-    await sendPushToUser(receiverId, {
-      title: "💬 New Message",
-      body: text.trim(),
-      url: "/chats",
-    });
+    const pushSent = await sendPushToUser(receiverId, {
+  title: "💬 New Message",
+  body: text.trim(),
+  url: "/chats",
+});
+
+console.log("📩 CHAT PUSH RESULT:", {
+  senderId,
+  receiverId,
+  pushSent,
+});
+
 
     // 🔥 socket unread update
     if (req.io) {
