@@ -53,7 +53,7 @@ function AppLayout() {
         {/* ✅ SINGLE CHAT PAGE */}
         <Route path="/chat/:chatId" element={<Chat />} />
 
-        <Route path="/my-listings" element={<MyListings />} />
+        <Route path="/mylistings" element={<MyListings />} />
 
         {/* ✅ ADMIN ROUTE */}
         <Route
