@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
-// ✅ socket outside component (important)
+// ✅ socket outside component
 const socket = io(SOCKET_URL, {
   transports: ["websocket", "polling"],
   withCredentials: true,
@@ -23,9 +23,15 @@ const Navbar = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
+  // ✅ Join user room (for unread updates)
+  useEffect(() => {
+    if (user?.id) socket.emit("joinUser", user.id);
+  }, [user?.id]);
+
   // ✅ Fetch unread count
   const fetchUnreadCount = async () => {
     if (!token) return;
+
     try {
       const res = await API.get("/chats/unread-count");
       setUnreadCount(res.data?.unreadCount || 0);
@@ -34,18 +40,12 @@ const Navbar = () => {
     }
   };
 
-  // ✅ join user room for socket updates
-  useEffect(() => {
-    if (user?.id) socket.emit("joinUser", user.id);
-  }, [user?.id]);
-
-  // 1st load + whenever token changes
+  // first load
   useEffect(() => {
     fetchUnreadCount();
-    // eslint-disable-next-line
   }, [token]);
 
-  // 🔔 live unread update
+  // 🔔 live update
   useEffect(() => {
     if (!token) return;
 
@@ -76,8 +76,11 @@ const Navbar = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUnreadCount(0);
+    setMenuOpen(false);
     navigate("/login");
   };
+
+  const closeMenu = () => setMenuOpen(false);
 
   return (
     <>
@@ -94,7 +97,6 @@ const Navbar = () => {
         />
       )}
 
-      {/* NAVBAR */}
       <div
         style={{
           position: "sticky",
@@ -116,7 +118,7 @@ const Navbar = () => {
             gap: "10px",
           }}
         >
-          {/* LOGO */}
+          {/* Logo */}
           <div
             style={{ color: "white", fontWeight: 900, cursor: "pointer" }}
             onClick={() => navigate("/")}
@@ -124,7 +126,47 @@ const Navbar = () => {
             Campus Market
           </div>
 
-          {/* MENU BUTTON + BADGE */}
+          {/* Desktop Links */}
+          <div className="nav-desktop">
+            <Link to="/" style={desktopLinkStyle}>
+              🏠 Home
+            </Link>
+
+            <Link to="/sell" style={desktopLinkStyle}>
+              ➕ Sell Item
+            </Link>
+
+            {/* ✅ My Listings back */}
+            {token && (
+              <Link to="/mylistings" style={desktopLinkStyle}>
+                📦 My Listings
+              </Link>
+            )}
+
+            <Link to="/chats" style={desktopLinkStyle}>
+              💬 Messages
+              {unreadCount > 0 && (
+                <span style={badgeStyle}>{unreadCount}</span>
+              )}
+            </Link>
+
+            {!token ? (
+              <>
+                <Link to="/login" style={desktopLinkStyle}>
+                  🔐 Login
+                </Link>
+                <Link to="/register" style={desktopLinkStyle}>
+                  ✨ Register
+                </Link>
+              </>
+            ) : (
+              <button onClick={logout} style={logoutDesktopBtn}>
+                Logout
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Hamburger */}
           <button
             onClick={() => setMenuOpen((p) => !p)}
             style={{
@@ -137,38 +179,34 @@ const Navbar = () => {
               cursor: "pointer",
               fontWeight: 900,
             }}
+            className="nav-hamburger"
             aria-label="Toggle menu"
           >
             ☰
 
-            {/* 🔥 Badge on menu icon */}
+            {/* ✅ Badge on hamburger icon */}
             {unreadCount > 0 && (
               <span
                 style={{
                   position: "absolute",
                   top: "-6px",
                   right: "-6px",
-                  minWidth: "18px",
-                  height: "18px",
-                  padding: "0 6px",
-                  borderRadius: "999px",
                   background: "#ef4444",
                   color: "white",
+                  borderRadius: "999px",
                   fontSize: "11px",
                   fontWeight: 900,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  padding: "2px 7px",
                   border: "2px solid #0b1220",
                 }}
               >
-                {unreadCount > 99 ? "99+" : unreadCount}
+                {unreadCount}
               </span>
             )}
           </button>
         </div>
 
-        {/* MENU LINKS */}
+        {/* Mobile Dropdown Menu */}
         {menuOpen && (
           <div
             style={{
@@ -177,16 +215,24 @@ const Navbar = () => {
               flexDirection: "column",
               gap: "10px",
             }}
+            className="nav-mobile"
           >
-            <Link to="/" onClick={() => setMenuOpen(false)} style={linkStyle}>
+            <Link to="/" onClick={closeMenu} style={linkStyle}>
               🏠 Home
             </Link>
 
-            <Link to="/sell" onClick={() => setMenuOpen(false)} style={linkStyle}>
+            <Link to="/sell" onClick={closeMenu} style={linkStyle}>
               ➕ Sell Item
             </Link>
 
-            <Link to="/chats" onClick={() => setMenuOpen(false)} style={linkStyle}>
+            {/* ✅ My Listings back */}
+            {token && (
+              <Link to="/mylistings" onClick={closeMenu} style={linkStyle}>
+                📦 My Listings
+              </Link>
+            )}
+
+            <Link to="/chats" onClick={closeMenu} style={linkStyle}>
               💬 Messages{" "}
               {unreadCount > 0 && (
                 <span
@@ -200,26 +246,17 @@ const Navbar = () => {
                     fontWeight: 900,
                   }}
                 >
-                  {unreadCount > 99 ? "99+" : unreadCount}
+                  {unreadCount}
                 </span>
               )}
             </Link>
 
             {!token ? (
               <>
-                <Link
-                  to="/login"
-                  onClick={() => setMenuOpen(false)}
-                  style={linkStyle}
-                >
+                <Link to="/login" onClick={closeMenu} style={linkStyle}>
                   🔐 Login
                 </Link>
-
-                <Link
-                  to="/register"
-                  onClick={() => setMenuOpen(false)}
-                  style={linkStyle}
-                >
+                <Link to="/register" onClick={closeMenu} style={linkStyle}>
                   ✨ Register
                 </Link>
               </>
@@ -242,6 +279,34 @@ const Navbar = () => {
             )}
           </div>
         )}
+
+        {/* CSS for Desktop/Mobile */}
+        <style>{`
+          .nav-desktop{
+            display: none;
+            align-items: center;
+            gap: 12px;
+          }
+
+          .nav-hamburger{
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          /* Desktop */
+          @media (min-width: 900px){
+            .nav-desktop{
+              display: flex;
+            }
+            .nav-hamburger{
+              display: none;
+            }
+            .nav-mobile{
+              display: none;
+            }
+          }
+        `}</style>
       </div>
     </>
   );
@@ -255,6 +320,36 @@ const linkStyle = {
   border: "1px solid rgba(255,255,255,0.12)",
   padding: "10px 12px",
   borderRadius: "12px",
+};
+
+const desktopLinkStyle = {
+  color: "white",
+  fontWeight: 800,
+  textDecoration: "none",
+  padding: "8px 10px",
+  borderRadius: "12px",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.10)",
+};
+
+const badgeStyle = {
+  marginLeft: "8px",
+  background: "#ef4444",
+  color: "white",
+  padding: "2px 8px",
+  borderRadius: "999px",
+  fontSize: "12px",
+  fontWeight: 900,
+};
+
+const logoutDesktopBtn = {
+  background: "rgba(239,68,68,0.14)",
+  border: "1px solid rgba(239,68,68,0.35)",
+  color: "#ff6b6b",
+  padding: "8px 10px",
+  borderRadius: "12px",
+  cursor: "pointer",
+  fontWeight: 900,
 };
 
 export default Navbar;
