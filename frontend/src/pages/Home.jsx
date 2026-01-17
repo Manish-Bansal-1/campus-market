@@ -68,6 +68,15 @@ const ItemCardSkeleton = () => {
   );
 };
 
+const formatTime = (dateStr) => {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+};
+
 const Home = () => {
   const [items, setItems] = useState([]);
 
@@ -87,7 +96,93 @@ const Home = () => {
   // ✅ ADMIN CHECK
   const isAdmin = user?.role === "admin";
 
+  // ============================
+  // ✅ PWA Install Button Logic
+  // ============================
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstall, setShowInstall] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
+
+  const isIos = () => {
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(ua);
+  };
+
+  const isInStandaloneMode = () => {
+    // iOS Safari: navigator.standalone
+    // Android/Chrome: matchMedia display-mode
+    return (
+      window.navigator.standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches
+    );
+  };
+
+  useEffect(() => {
+    // If already installed -> hide button
+    if (isInStandaloneMode()) {
+      setShowInstall(false);
+      return;
+    }
+
+    const handler = (e) => {
+      // Stop Chrome mini-infobar
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    // If app gets installed -> hide button
+    const installedHandler = () => {
+      setShowInstall(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener("appinstalled", installedHandler);
+
+    // iOS doesn't support beforeinstallprompt
+    // But we can still show a clean button for iOS users
+    if (isIos() && !isInStandaloneMode()) {
+      setShowInstall(true);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    // iOS -> show guide
+    if (isIos()) {
+      setShowIosGuide(true);
+      return;
+    }
+
+    // Android/Desktop -> show native install popup
+    if (!deferredPrompt) {
+      alert("Install option not available right now 😅");
+      return;
+    }
+
+    try {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+
+      if (choice?.outcome === "accepted") {
+        setShowInstall(false);
+      }
+
+      setDeferredPrompt(null);
+    } catch (err) {
+      console.log("INSTALL ERROR:", err.message);
+    }
+  };
+
+  // ============================
   // ✅ Fetch items with retry
+  // ============================
   const fetchItems = async (retries = 3) => {
     try {
       setLoading(true);
@@ -195,6 +290,13 @@ const Home = () => {
           </div>
 
           <div className="home-actions">
+            {/* ✅ Install App Button (clean + only when possible) */}
+            {showInstall && (
+              <button onClick={handleInstallClick} className="home-install-btn">
+                ⬇ Install App
+              </button>
+            )}
+
             {isAdmin && (
               <button
                 onClick={() => navigate("/admin/ads")}
@@ -340,11 +442,7 @@ const Home = () => {
                 <div key={item._id} className="item-card">
                   {/* Image */}
                   <div style={{ position: "relative" }}>
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="item-img"
-                    />
+                    <img src={item.image} alt={item.title} className="item-img" />
 
                     {/* Price Badge */}
                     <div className="price-badge">₹{item.price}</div>
@@ -360,9 +458,7 @@ const Home = () => {
                     <div className="seller-row">
                       <div className="seller-chip">
                         👤{" "}
-                        {item.seller?.name ||
-                          item.seller?.username ||
-                          "User"}
+                        {item.seller?.name || item.seller?.username || "User"}
                       </div>
 
                       {(item.seller?.year || item.seller?.gender) && (
@@ -411,6 +507,75 @@ const Home = () => {
       </div>
 
       {/* ===========================
+          iOS Guide Modal (clean)
+      =========================== */}
+      {showIosGuide && (
+        <div
+          onClick={() => setShowIosGuide(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "18px",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "520px",
+              maxWidth: "100%",
+              background: "rgba(15,23,42,0.95)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              borderRadius: "18px",
+              padding: "18px",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.45)",
+            }}
+          >
+            <h2 style={{ margin: 0, color: "white", fontWeight: 900 }}>
+              📲 Install on iPhone
+            </h2>
+
+            <p
+              style={{
+                marginTop: "10px",
+                color: "rgba(255,255,255,0.75)",
+                fontWeight: 700,
+                fontSize: "13px",
+                lineHeight: 1.5,
+              }}
+            >
+              iPhone Safari me direct install popup nahi aata 😅
+              <br />
+              Install karne ke liye:
+              <br />
+              <b>Share</b> button dabao → <b>Add to Home Screen</b>
+            </p>
+
+            <button
+              onClick={() => setShowIosGuide(false)}
+              style={{
+                marginTop: "14px",
+                width: "100%",
+                padding: "12px",
+                borderRadius: "14px",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 900,
+                color: "white",
+                background: "rgba(59,130,246,0.9)",
+              }}
+            >
+              Okay
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===========================
           MOBILE PREMIUM CSS
       =========================== */}
       <style>
@@ -444,6 +609,18 @@ const Home = () => {
             display:flex;
             gap:10px;
             flex-wrap:wrap;
+            align-items:center;
+          }
+
+          .home-install-btn{
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: white;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 900;
+            box-shadow: 0 10px 18px rgba(0,0,0,0.25);
           }
 
           .home-admin-btn{
@@ -693,7 +870,7 @@ const Home = () => {
               justify-content:space-between;
             }
 
-            .home-refresh-btn, .home-admin-btn{
+            .home-refresh-btn, .home-admin-btn, .home-install-btn{
               padding:8px 10px;
               border-radius:10px;
               font-size:12px;
