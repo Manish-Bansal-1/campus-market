@@ -2,6 +2,15 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
 
+const COLLEGES = [
+  "JECRC Foundation",
+  "JECRC University",
+  "Poornima College",
+  "Poornima University",
+  "SKIT Jaipur",
+  "Other",
+];
+
 const Register = () => {
   const [name, setName] = useState(""); // required
   const [username, setUsername] = useState(""); // required unique
@@ -11,27 +20,27 @@ const Register = () => {
   const [year, setYear] = useState("");
   const [gender, setGender] = useState("");
 
+  // ✅ NEW: College (required)
+  const [college, setCollege] = useState("");
+  const [otherCollegeName, setOtherCollegeName] = useState("");
+
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
 
-    if (!name.trim()) {
-      alert("Name is required");
-      return;
-    }
-    if (!username.trim()) {
-      alert("Username is required");
-      return;
-    }
-    if (username.includes(" ")) {
-      alert("Username cannot contain spaces");
-      return;
-    }
-    if (!password) {
-      alert("Password is required");
-      return;
+    if (!name.trim()) return alert("Name is required");
+    if (!username.trim()) return alert("Username is required");
+    if (username.includes(" ")) return alert("Username cannot contain spaces");
+    if (!password) return alert("Password is required");
+
+    // ✅ College compulsory
+    if (!college) return alert("Please select your college");
+
+    // ✅ If Other, manual name required
+    if (college === "Other" && !otherCollegeName.trim()) {
+      return alert("Please enter your college name");
     }
 
     try {
@@ -43,6 +52,10 @@ const Register = () => {
         password,
         year,
         gender,
+
+        // ✅ NEW
+        college,
+        otherCollegeName: college === "Other" ? otherCollegeName.trim() : "",
       });
 
       alert("Registration successful! Please login.");
@@ -129,6 +142,39 @@ const Register = () => {
             required
             style={inputStyle}
           />
+
+          {/* ✅ College required */}
+          <select
+            value={college}
+            onChange={(e) => {
+              setCollege(e.target.value);
+              if (e.target.value !== "Other") setOtherCollegeName("");
+            }}
+            style={selectStyle}
+            required
+          >
+            <option value="" style={{ color: "#111827" }}>
+              Select College (required)
+            </option>
+
+            {COLLEGES.map((c) => (
+              <option key={c} value={c} style={{ color: "#111827" }}>
+                {c}
+              </option>
+            ))}
+          </select>
+
+          {/* ✅ Other college input */}
+          {college === "Other" && (
+            <input
+              type="text"
+              placeholder="Enter your college name"
+              value={otherCollegeName}
+              onChange={(e) => setOtherCollegeName(e.target.value)}
+              style={inputStyle}
+              required
+            />
+          )}
 
           {/* Year + Gender */}
           <div style={{ display: "flex", gap: "10px" }}>

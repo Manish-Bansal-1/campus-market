@@ -64,7 +64,8 @@ router.get("/all", async (req, res) => {
     const total = await Item.countDocuments(query);
 
     const items = await Item.find(query)
-      .populate("seller", "name username year gender _id")
+      // ✅ ADD college + otherCollegeName here
+      .populate("seller", "name username year gender _id college otherCollegeName")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

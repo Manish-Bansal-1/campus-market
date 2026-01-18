@@ -3,12 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import SEO from "../components/SEO";
 
-// ✅ Push functions
-import {
-  enablePushNotifications,
-  shouldShowPushSuccessPopup,
-} from "../utils/push";
-
 const ItemCardSkeleton = () => {
   return (
     <div
@@ -85,10 +79,6 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ✅ Install Button state (PWA)
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [canInstall, setCanInstall] = useState(false);
-
   const navigate = useNavigate();
 
   // ✅ logged in user
@@ -137,40 +127,6 @@ const Home = () => {
     }
   };
 
-  // ✅ PWA install event capture
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setCanInstall(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  // ✅ Enable push notifications once (and popup only once)
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    // only auto-enable if permission is not granted yet
-    // (if already granted, it will subscribe silently)
-    const runPush = async () => {
-      const res = await enablePushNotifications(token);
-
-      if (res?.success) {
-        // ✅ show popup only first time
-        if (shouldShowPushSuccessPopup()) {
-          alert("✅ Notifications enabled successfully!");
-        }
-      }
-    };
-
-    runPush();
-  }, []);
-
   useEffect(() => {
     fetchItems();
     fetchAds();
@@ -213,20 +169,10 @@ const Home = () => {
     );
   };
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
-
-    if (choice?.outcome === "accepted") {
-      console.log("✅ User accepted install");
-    } else {
-      console.log("❌ User dismissed install");
-    }
-
-    setDeferredPrompt(null);
-    setCanInstall(false);
+  const getCollegeLabel = (seller) => {
+    if (!seller) return "";
+    if (seller.college === "Other") return seller.otherCollegeName || "Other";
+    return seller.college || "";
   };
 
   return (
@@ -255,12 +201,6 @@ const Home = () => {
           </div>
 
           <div className="home-actions">
-            {canInstall && (
-              <button onClick={handleInstallClick} className="home-install-btn">
-                ⬇️ Install App
-              </button>
-            )}
-
             {isAdmin && (
               <button
                 onClick={() => navigate("/admin/ads")}
@@ -401,12 +341,17 @@ const Home = () => {
           <div className="items-grid">
             {items.map((item) => {
               const isMyItem = item.seller?._id === user.id;
+              const collegeLabel = getCollegeLabel(item.seller);
 
               return (
                 <div key={item._id} className="item-card">
                   {/* Image */}
                   <div style={{ position: "relative" }}>
-                    <img src={item.image} alt={item.title} className="item-img" />
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="item-img"
+                    />
 
                     {/* Price Badge */}
                     <div className="price-badge">₹{item.price}</div>
@@ -422,7 +367,9 @@ const Home = () => {
                     <div className="seller-row">
                       <div className="seller-chip">
                         👤{" "}
-                        {item.seller?.name || item.seller?.username || "User"}
+                        {item.seller?.name ||
+                          item.seller?.username ||
+                          "User"}
                       </div>
 
                       {(item.seller?.year || item.seller?.gender) && (
@@ -430,6 +377,13 @@ const Home = () => {
                           {item.seller?.year ? `🎓 ${item.seller.year}` : ""}
                           {item.seller?.year && item.seller?.gender ? " • " : ""}
                           {item.seller?.gender ? `⚧️ ${item.seller.gender}` : ""}
+                        </div>
+                      )}
+
+                      {/* ✅ NEW: College */}
+                      {collegeLabel && (
+                        <div className="seller-chip">
+                          🏫 {collegeLabel}
                         </div>
                       )}
                     </div>
@@ -471,7 +425,7 @@ const Home = () => {
       </div>
 
       {/* ===========================
-          CSS
+          MOBILE PREMIUM CSS
       =========================== */}
       <style>
         {`
@@ -504,16 +458,6 @@ const Home = () => {
             display:flex;
             gap:10px;
             flex-wrap:wrap;
-          }
-
-          .home-install-btn{
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            border: 1px solid rgba(255,255,255,0.18);
-            color: white;
-            padding: 10px 14px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 900;
           }
 
           .home-admin-btn{
@@ -763,7 +707,7 @@ const Home = () => {
               justify-content:space-between;
             }
 
-            .home-refresh-btn, .home-admin-btn, .home-install-btn{
+            .home-refresh-btn, .home-admin-btn{
               padding:8px 10px;
               border-radius:10px;
               font-size:12px;

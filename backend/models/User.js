@@ -31,6 +31,28 @@ const UserSchema = new mongoose.Schema(
       maxlength: 20,
     },
 
+    // ✅ NEW: College (required)
+    college: {
+      type: String,
+      required: true,
+      enum: [
+        "JECRC Foundation",
+        "JECRC University",
+        "Poornima College",
+        "Poornima University",
+        "SKIT Jaipur",
+        "Other",
+      ],
+    },
+
+    // ✅ NEW: Only used when college = Other
+    otherCollegeName: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 80,
+    },
+
     year: {
       type: String,
       enum: ["", "1st", "2nd", "3rd", "4th"],

@@ -9,12 +9,55 @@ const User = require("../models/User");
 ====================== */
 router.post("/register", async (req, res) => {
   try {
-    const { name, username, password, year, gender } = req.body;
+    const { name, username, password, year, gender, college, otherCollegeName } =
+      req.body;
 
     if (!name || !username || !password) {
       return res
         .status(400)
         .json({ message: "Name, username & password required" });
+    }
+
+    // ✅ College required
+    if (!college) {
+      return res.status(400).json({ message: "College is required" });
+    }
+
+    const allowedColleges = [
+      "JECRC Foundation",
+      "JECRC University",
+      "Poornima College",
+      "Poornima University",
+      "SKIT Jaipur",
+      "Other",
+    ];
+
+    if (!allowedColleges.includes(college)) {
+      return res.status(400).json({ message: "Invalid college selected" });
+    }
+
+    // ✅ If Other -> manual name required
+    let cleanOtherCollegeName = "";
+    if (college === "Other") {
+      cleanOtherCollegeName = (otherCollegeName || "").trim();
+
+      if (!cleanOtherCollegeName) {
+        return res
+          .status(400)
+          .json({ message: "Please enter your college name" });
+      }
+
+      if (cleanOtherCollegeName.length < 2) {
+        return res
+          .status(400)
+          .json({ message: "College name too short" });
+      }
+
+      if (cleanOtherCollegeName.length > 80) {
+        return res
+          .status(400)
+          .json({ message: "College name too long" });
+      }
     }
 
     const cleanName = name.trim();
@@ -43,6 +86,10 @@ router.post("/register", async (req, res) => {
       password: hashedPassword,
       year: safeYear,
       gender: safeGender,
+
+      // ✅ NEW
+      college,
+      otherCollegeName: college === "Other" ? cleanOtherCollegeName : "",
     });
 
     await user.save();
@@ -96,6 +143,10 @@ router.post("/login", async (req, res) => {
         role: user.role,
         year: user.year || "",
         gender: user.gender || "",
+
+        // ✅ NEW
+        college: user.college || "",
+        otherCollegeName: user.otherCollegeName || "",
       },
     });
   } catch (err) {
