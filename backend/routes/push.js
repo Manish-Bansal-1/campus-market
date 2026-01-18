@@ -5,7 +5,8 @@ const User = require("../models/User");
 
 router.post("/subscribe", auth, async (req, res) => {
   try {
-    const sub = req.body;
+    // ✅ Frontend sends: { subscription }
+    const sub = req.body?.subscription;
 
     if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
       return res.status(400).json({ error: "Invalid subscription" });
