@@ -79,6 +79,11 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // ✅ Install App button (PWA)
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [installing, setInstalling] = useState(false);
+
   const navigate = useNavigate();
 
   // ✅ logged in user
@@ -131,6 +136,52 @@ const Home = () => {
     fetchItems();
     fetchAds();
   }, []);
+
+  // ✅ Listen PWA install event
+  useEffect(() => {
+    const handler = (e) => {
+      // Stop default mini-infobar
+      e.preventDefault();
+
+      // Save the event for later trigger
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    try {
+      if (!deferredPrompt) {
+        // fallback: show message
+        alert(
+          "Install option is not available right now.\n\nTip: On mobile Chrome, open menu (⋮) → 'Add to Home screen'"
+        );
+        return;
+      }
+
+      setInstalling(true);
+
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+
+      // accepted / dismissed
+      console.log("📲 Install choice:", choiceResult?.outcome);
+
+      // After prompt used once, it becomes null
+      setDeferredPrompt(null);
+      setCanInstall(false);
+    } catch (err) {
+      console.log("❌ Install error:", err);
+    } finally {
+      setInstalling(false);
+    }
+  };
 
   const startChat = async (itemId, sellerId) => {
     if (!localStorage.getItem("token")) {
@@ -380,11 +431,9 @@ const Home = () => {
                         </div>
                       )}
 
-                      {/* ✅ NEW: College */}
+                      {/* ✅ College */}
                       {collegeLabel && (
-                        <div className="seller-chip">
-                          🏫 {collegeLabel}
-                        </div>
+                        <div className="seller-chip">🏫 {collegeLabel}</div>
                       )}
                     </div>
                   </div>
@@ -424,8 +473,20 @@ const Home = () => {
         )}
       </div>
 
+      {/* ✅ FLOATING INSTALL BUTTON */}
+      {canInstall && (
+        <button
+          onClick={handleInstallClick}
+          disabled={installing}
+          className="install-float-btn"
+          title="Install Campus Market App"
+        >
+          {installing ? "⏳ Installing..." : "⬇️ Get App"}
+        </button>
+      )}
+
       {/* ===========================
-          MOBILE PREMIUM CSS
+          CSS
       =========================== */}
       <style>
         {`
@@ -581,7 +642,7 @@ const Home = () => {
 
           .item-card{
             background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
+            border: "1px solid rgba(255,255,255,0.12)";
             border-radius: 18px;
             overflow: hidden;
             box-shadow: 0 10px 20px rgba(0,0,0,0.25);
@@ -688,6 +749,29 @@ const Home = () => {
             border-radius: 14px;
             cursor:pointer;
             font-weight:900;
+          }
+
+          /* ✅ Floating install button */
+          .install-float-btn{
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 9999;
+
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.20);
+            border-radius: 999px;
+            padding: 12px 14px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+            letter-spacing: 0.2px;
+          }
+
+          .install-float-btn:disabled{
+            opacity: 0.75;
+            cursor: not-allowed;
           }
 
           /* ===== MOBILE PREMIUM ===== */
@@ -836,6 +920,19 @@ const Home = () => {
               border-radius:12px;
               font-size:12px;
             }
+
+            .install-float-btn{
+              right: 14px;
+              bottom: 14px;
+              padding: 11px 13px;
+              font-size: 13px;
+            }
+          }
+
+          @keyframes pulse {
+            0% { opacity: 0.35; }
+            50% { opacity: 0.85; }
+            100% { opacity: 0.35; }
           }
         `}
       </style>
